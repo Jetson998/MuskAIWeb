@@ -8,6 +8,7 @@ This folder contains a minimal Docker Compose deployment scaffold and project do
 - [Development and operations notes](docs/DEVELOPMENT.md): production deployment, branding patch, prompt maintenance, verification commands.
 - [Model optimization technical spec](docs/MODEL_OPTIMIZATION_TECH_SPEC.md): P0 generation integrity guard and P1 context intelligence architecture.
 - [Model optimization execution plan](docs/MODEL_OPTIMIZATION_EXECUTION.md): numbered source-level development steps and progress.
+- [Open WebUI v0.9.5 model optimization patch package](source-patches/open-webui-v0.9.5/model-optimization-p0/README.md): tested P0 core module and source-level wiring guide.
 
 ## Prerequisites
 

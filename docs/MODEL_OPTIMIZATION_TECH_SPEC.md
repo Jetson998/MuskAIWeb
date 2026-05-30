@@ -7,6 +7,13 @@
 ```text
 Open WebUI API version: 0.9.5
 Musk WebAI frontend patch version: musk-webai-ui-1780157083
+Open WebUI v0.9.5 upstream commit: 3660bc00fd807deced3400a63bfa6db47811a3bb
+```
+
+当前 P0 核心补丁包：
+
+```text
+source-patches/open-webui-v0.9.5/model-optimization-p0/
 ```
 
 ## 1. 背景与问题判断
