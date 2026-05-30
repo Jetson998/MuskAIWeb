@@ -93,6 +93,8 @@ WEAK_INCOMPLETE_ENDINGS = (
     "分别是",
 )
 
+CHINESE_INCOMPLETE_TAIL_PATTERN = re.compile(r"[\u4e00-\u9fff]{2,}[、，,：:；;][\u4e00-\u9fff]{1,2}$")
+
 
 def _env_flag(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
@@ -216,7 +218,13 @@ def build_truncation_diagnosis(
         if reason.startswith("finish_reason:")
         or reason in {"stream_interrupted", "saved_message_shorter_than_stream"}
     ]
-    if strong_reasons or "sentence_boundary_incomplete" in weak_reasons or len(weak_reasons) >= 2:
+    if (
+        strong_reasons
+        or "sentence_boundary_incomplete" in weak_reasons
+        or "unclosed_code_fence" in weak_reasons
+        or "chinese_tail_fragment" in weak_reasons
+        or len(weak_reasons) >= 2
+    ):
         return GenerationDiagnosis(GenerationStatus.INCOMPLETE, reasons, True)
 
     return GenerationDiagnosis(GenerationStatus.COMPLETE, reasons, False)
@@ -232,6 +240,9 @@ def _weak_truncation_reasons(text: str) -> list[str]:
     tail = stripped[-24:]
     if any(tail.endswith(ending) for ending in WEAK_INCOMPLETE_ENDINGS):
         reasons.append("semantic_tail_incomplete")
+
+    if CHINESE_INCOMPLETE_TAIL_PATTERN.search(tail):
+        reasons.append("chinese_tail_fragment")
 
     if stripped.count("```") % 2 == 1:
         reasons.append("unclosed_code_fence")

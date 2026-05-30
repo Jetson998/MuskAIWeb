@@ -40,9 +40,14 @@ class GenerationIntegrityTests(unittest.TestCase):
         diagnosis = build_truncation_diagnosis(content="API gateway: unified routing,")
         self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
 
-    def test_unclosed_code_fence_alone_is_not_strong(self):
+    def test_chinese_half_tail_marks_incomplete(self):
+        diagnosis = build_truncation_diagnosis(content="API网关负责统一路由、限")
+        self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
+        self.assertIn("chinese_tail_fragment", diagnosis.reasons)
+
+    def test_unclosed_code_fence_marks_incomplete_for_long_task(self):
         diagnosis = build_truncation_diagnosis(content="```python\nprint('hello')")
-        self.assertEqual(diagnosis.status, GenerationStatus.COMPLETE)
+        self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
         self.assertIn("unclosed_code_fence", diagnosis.reasons)
 
     def test_stream_length_mismatch_marks_incomplete(self):

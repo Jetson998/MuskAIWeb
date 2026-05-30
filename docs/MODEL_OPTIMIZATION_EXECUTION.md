@@ -72,7 +72,7 @@
 | 5.3 | done | 合并判断输出 `generation_status` | `build_message_generation_patch` 输出前端字段和 metadata 字段。 |
 | 5.4 | pending | 写入 message metadata | 前端可读取 `incomplete` 和 `can_continue`。 |
 | 5.5 | pending | 日志记录 `truncation_reasons` | 能解释为什么判定为 incomplete。 |
-| 5.6 | pending | 加测试 fixture | 用 `API网关...统一路由、限` 这类半句结尾做回归。 |
+| 5.6 | done | 加测试 fixture | 已覆盖 `API网关负责统一路由、限` 中文半句和未闭合代码块回归。 |
 
 ### 6. TokenBudgetManager
 
@@ -148,13 +148,13 @@ source-patches/open-webui-v0.9.5/model-optimization-p0/
 
 - `generation_integrity.py`：P0 核心逻辑。
 - `PATCH_GUIDE.md`：Open WebUI v0.9.5 真实接入点和 wiring 指南。
-- `test_generation_integrity.py`：11 条单元测试。
+- `test_generation_integrity.py`：12 条单元测试。
 
 已验证：
 
 ```text
 python3 -m unittest discover -s source-patches/open-webui-v0.9.5/model-optimization-p0/tests/model_optimization
-Ran 11 tests OK
+Ran 12 tests OK
 
 PYTHONPYCACHEPREFIX=/private/tmp/openwebui-pycache python3 -m py_compile source-patches/open-webui-v0.9.5/model-optimization-p0/backend/open_webui/model_optimization/generation_integrity.py
 OK
