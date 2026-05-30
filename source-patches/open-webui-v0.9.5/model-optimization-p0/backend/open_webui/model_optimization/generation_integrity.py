@@ -95,6 +95,8 @@ WEAK_INCOMPLETE_ENDINGS = (
 
 CHINESE_INCOMPLETE_TAIL_PATTERN = re.compile(r"[\u4e00-\u9fff]{2,}[、，,：:；;][\u4e00-\u9fff]{1,2}$")
 
+COMMON_PROVIDER_OUTPUT_CAPS = {4096, 8192, 12000, 16000}
+
 
 def _env_flag(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
@@ -110,6 +112,28 @@ def _coerce_int(value: Any) -> Optional[int]:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _extract_output_tokens(usage: Optional[dict[str, Any]]) -> Optional[int]:
+    if not usage:
+        return None
+    return (
+        _coerce_int(usage.get("completion_tokens"))
+        or _coerce_int(usage.get("output_tokens"))
+        or _coerce_int(usage.get("generated_tokens"))
+        or _coerce_int(usage.get("eval_count"))
+    )
+
+
+def _extract_output_token_limit(usage: Optional[dict[str, Any]]) -> Optional[int]:
+    if not usage:
+        return None
+    return (
+        _coerce_int(usage.get("max_tokens"))
+        or _coerce_int(usage.get("max_completion_tokens"))
+        or _coerce_int(usage.get("max_output_tokens"))
+        or _coerce_int(usage.get("output_token_limit"))
+    )
 
 
 def _message_text(message: dict[str, Any]) -> str:
@@ -150,7 +174,7 @@ def observe_openai_stream_event(trace: GenerationTrace, data: dict[str, Any]) ->
     usage = data.get("usage") or data.get("timings") or {}
     if usage:
         trace.prompt_tokens = _coerce_int(usage.get("prompt_tokens")) or trace.prompt_tokens
-        trace.completion_tokens = _coerce_int(usage.get("completion_tokens")) or trace.completion_tokens
+        trace.completion_tokens = _extract_output_tokens(usage) or trace.completion_tokens
         trace.total_tokens = _coerce_int(usage.get("total_tokens")) or trace.total_tokens
 
     choices = data.get("choices") or []
@@ -174,7 +198,7 @@ def observe_openai_stream_event(trace: GenerationTrace, data: dict[str, Any]) ->
         response_usage = (data.get("response") or {}).get("usage") or {}
         if response_usage:
             trace.prompt_tokens = _coerce_int(response_usage.get("prompt_tokens")) or trace.prompt_tokens
-            trace.completion_tokens = _coerce_int(response_usage.get("completion_tokens")) or trace.completion_tokens
+            trace.completion_tokens = _extract_output_tokens(response_usage) or trace.completion_tokens
             trace.total_tokens = _coerce_int(response_usage.get("total_tokens")) or trace.total_tokens
 
     if data.get("error"):
@@ -188,6 +212,7 @@ def build_truncation_diagnosis(
     content: str,
     finish_reason: Optional[str] = None,
     usage: Optional[dict[str, Any]] = None,
+    output_token_limit: Optional[int] = None,
     stream_interrupted: bool = False,
     stream_text_length: Optional[int] = None,
     saved_message_length: Optional[int] = None,
@@ -201,6 +226,13 @@ def build_truncation_diagnosis(
     normalized_finish_reason = (finish_reason or "").lower()
     if normalized_finish_reason in {"length", "max_tokens", "max_output_tokens"}:
         reasons.append(f"finish_reason:{normalized_finish_reason}")
+
+    output_tokens = _extract_output_tokens(usage)
+    effective_output_limit = output_token_limit or _extract_output_token_limit(usage)
+    if output_tokens and effective_output_limit and output_tokens >= effective_output_limit:
+        reasons.append("output_tokens_hit_limit")
+    elif output_tokens in COMMON_PROVIDER_OUTPUT_CAPS:
+        reasons.append(f"output_tokens_hit_common_cap:{output_tokens}")
 
     if stream_interrupted:
         reasons.append("stream_interrupted")
@@ -216,7 +248,8 @@ def build_truncation_diagnosis(
         reason
         for reason in reasons
         if reason.startswith("finish_reason:")
-        or reason in {"stream_interrupted", "saved_message_shorter_than_stream"}
+        or reason.startswith("output_tokens_hit_common_cap:")
+        or reason in {"stream_interrupted", "saved_message_shorter_than_stream", "output_tokens_hit_limit"}
     ]
     if (
         strong_reasons
@@ -266,10 +299,14 @@ def build_message_generation_patch(
     diagnosis: Optional[GenerationDiagnosis] = None,
 ) -> dict[str, Any]:
     if diagnosis is None:
+        diagnosis_usage = dict(usage or {})
+        if trace and trace.completion_tokens and not _extract_output_tokens(diagnosis_usage):
+            diagnosis_usage["completion_tokens"] = trace.completion_tokens
         diagnosis = build_truncation_diagnosis(
             content=content,
             finish_reason=trace.finish_reason if trace else None,
-            usage=usage,
+            usage=diagnosis_usage or None,
+            output_token_limit=trace.max_tokens if trace else None,
             stream_interrupted=trace.stream_interrupted if trace else False,
             stream_text_length=trace.stream_text_length if trace else None,
             saved_message_length=len(content or ""),

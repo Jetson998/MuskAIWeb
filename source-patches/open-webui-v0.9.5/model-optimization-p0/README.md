@@ -8,6 +8,7 @@ It is intentionally scoped to deterministic generation integrity:
 - generation lifecycle observation
 - empty assistant message detection
 - truncation / incomplete detection
+- output token cap detection, including common provider defaults such as 4096
 - dynamic output token budgeting for long tasks
 - continuation prompt planning
 

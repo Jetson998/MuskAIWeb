@@ -58,6 +58,23 @@ class GenerationIntegrityTests(unittest.TestCase):
         )
         self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
 
+    def test_output_tokens_hit_explicit_limit_marks_incomplete(self):
+        diagnosis = build_truncation_diagnosis(
+            content="A long report ended with a superficially complete sentence.",
+            usage={"completion_tokens": 4096},
+            output_token_limit=4096,
+        )
+        self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
+        self.assertIn("output_tokens_hit_limit", diagnosis.reasons)
+
+    def test_output_tokens_hit_common_provider_cap_marks_incomplete(self):
+        diagnosis = build_truncation_diagnosis(
+            content="九、多情景趋势推演\n情景A：强势调整后继续上攻（概率35%）",
+            usage={"output_tokens": 4096},
+        )
+        self.assertEqual(diagnosis.status, GenerationStatus.INCOMPLETE)
+        self.assertIn("output_tokens_hit_common_cap:4096", diagnosis.reasons)
+
     def test_observe_stream_event_tracks_finish_reason_and_usage(self):
         trace = GenerationTrace.from_metadata({"chat_id": "c1", "message_id": "m1"})
         observe_openai_stream_event(
@@ -75,6 +92,14 @@ class GenerationIntegrityTests(unittest.TestCase):
         self.assertEqual(trace.finish_reason, "length")
         self.assertEqual(trace.total_tokens, 30)
 
+    def test_observe_stream_event_tracks_output_tokens_alias(self):
+        trace = GenerationTrace.from_metadata({"chat_id": "c1", "message_id": "m1"})
+        observe_openai_stream_event(
+            trace,
+            {"usage": {"input_tokens": 1024, "output_tokens": 4096, "total_tokens": 5120}},
+        )
+        self.assertEqual(trace.completion_tokens, 4096)
+
     def test_generation_patch_contains_frontend_fields(self):
         trace = GenerationTrace.from_metadata({"chat_id": "c1", "message_id": "m1"})
         trace.finish_reason = "length"
@@ -82,6 +107,33 @@ class GenerationIntegrityTests(unittest.TestCase):
         self.assertEqual(patch["generation_status"], "incomplete")
         self.assertTrue(patch["can_continue"])
         self.assertIn("generation", patch)
+
+    def test_generation_patch_marks_trace_max_tokens_as_incomplete(self):
+        trace = GenerationTrace.from_metadata(
+            {"chat_id": "c1", "message_id": "m1"},
+            payload={"max_tokens": 4096},
+        )
+        trace.completion_tokens = 4096
+        patch = build_message_generation_patch(
+            trace,
+            content="A long report ended with a superficially complete sentence.",
+            usage={"completion_tokens": 4096},
+        )
+        self.assertEqual(patch["generation_status"], "incomplete")
+        self.assertIn("output_tokens_hit_limit", patch["generation_reasons"])
+
+    def test_generation_patch_uses_trace_completion_tokens_without_usage(self):
+        trace = GenerationTrace.from_metadata(
+            {"chat_id": "c1", "message_id": "m1"},
+            payload={"max_tokens": 4096},
+        )
+        trace.completion_tokens = 4096
+        patch = build_message_generation_patch(
+            trace,
+            content="A long report ended with a superficially complete sentence.",
+        )
+        self.assertEqual(patch["generation_status"], "incomplete")
+        self.assertIn("output_tokens_hit_limit", patch["generation_reasons"])
 
     def test_dynamic_max_tokens_long_task(self):
         import os

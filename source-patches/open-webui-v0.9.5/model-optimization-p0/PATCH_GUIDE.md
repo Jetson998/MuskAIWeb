@@ -295,5 +295,6 @@ if (can_continue !== undefined) message.can_continue = can_continue;
 - 识别 APP 是「孕动冒险」。
 - 不出现空 assistant 完成态气泡。
 - 如果 `finish_reason=length`，消息为 `generation_status=incomplete`。
+- 如果 `completion_tokens/output_tokens` 打满显式上限，或正好命中 4096 等常见 provider 默认上限，也标记 incomplete。
 - 如果最后一句停在 `统一路由、限` 等半句，也标记 incomplete。
 - 点击继续生成后，从原回答末尾续写，不重答整篇。
