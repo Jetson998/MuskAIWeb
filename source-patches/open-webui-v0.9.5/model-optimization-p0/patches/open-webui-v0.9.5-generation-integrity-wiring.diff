@@ -1,0 +1,296 @@
+diff --git a/backend/open_webui/utils/middleware.py b/backend/open_webui/utils/middleware.py
+index 0000000..0000000 100644
+--- a/backend/open_webui/utils/middleware.py
++++ b/backend/open_webui/utils/middleware.py
+@@ -100,6 +100,15 @@ from open_webui.utils.misc import (
+     convert_output_to_messages,
+     strip_empty_content_blocks,
+ )
++from open_webui.model_optimization.generation_integrity import (
++    GenerationTrace,
++    apply_dynamic_max_tokens,
++    build_continuation_instruction,
++    build_message_generation_patch,
++    build_stream_completion_event,
++    build_truncation_diagnosis,
++    observe_openai_stream_event,
++)
+ from open_webui.utils.tools import (
+     get_tools,
+     get_updated_tool_function,
+@@ -2286,6 +2295,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
+             metadata['selected_model_id'] = selected_model_id
+ 
+     form_data = apply_params_to_form_data(form_data, model)
++    form_data = apply_dynamic_max_tokens(form_data)
+     log.debug(f'form_data: {form_data}')
+ 
+     # Guided regeneration: extract before it reaches the LLM provider
+@@ -2295,6 +2305,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
+     # which the frontend strips, causing tool calls to be merged into content.
+     chat_id = metadata.get('chat_id')
+     user_message_id = metadata.get('user_message_id')
++    continuation_instruction = None
+ 
+     if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
+         db_messages = await load_messages_from_db(chat_id, user_message_id)
+@@ -2308,9 +2319,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
+                     db_messages.append(
+                         {k: v for k, v in assistant_message.items() if k in ('role', 'content', 'output', 'files')}
+                     )
++                    assistant_output = assistant_message.get('output') or []
++                    assistant_tail = assistant_message.get('content') or serialize_output(assistant_output)
++                    continuation_instruction = build_continuation_instruction(
++                        assistant_tail=assistant_tail,
++                        active_task=metadata.get('user_prompt')
++                        or get_last_user_message(form_data.get('messages', []))
++                        or '',
++                    )
+ 
+             system_message = get_system_message(form_data.get('messages', []))
+             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
++            if continuation_instruction:
++                form_data['messages'].append(
++                    {
++                        'role': 'user',
++                        'content': continuation_instruction,
++                    }
++                )
+ 
+             # Inject image files into content as image_url parts (mirrors frontend logic)
+             for message in form_data['messages']:
+@@ -3481,6 +3505,21 @@ async def non_streaming_chat_response_handler(response, ctx):
+                             }
+                         ]
+ 
++                    usage = normalize_usage(response_data.get('usage', {}) or {})
++                    finish_reason = choices[0].get('finish_reason')
++                    generation_diagnosis = build_truncation_diagnosis(
++                        content=content,
++                        finish_reason=finish_reason,
++                        usage=usage,
++                    )
++                    generation_patch = build_message_generation_patch(
++                        None,
++                        content=content,
++                        output=response_output,
++                        usage=usage,
++                        diagnosis=generation_diagnosis,
++                    )
++
+                     await event_emitter(
+                         {
+                             'type': 'chat:completion',
+@@ -3489,13 +3528,11 @@ async def non_streaming_chat_response_handler(response, ctx):
+                                 'content': content,
+                                 'output': response_output,
+                                 'title': title,
++                                **build_stream_completion_event(generation_patch),
+                             },
+                         }
+                     )
+ 
+-                    # Save message in the database
+-                    usage = normalize_usage(response_data.get('usage', {}) or {})
+-
+                     if not metadata['chat_id'].startswith('channel:'):
+                         await Chats.upsert_message_to_chat_by_id_and_message_id(
+                             metadata['chat_id'],
+@@ -3505,6 +3541,7 @@ async def non_streaming_chat_response_handler(response, ctx):
+                                 'content': content,
+                                 'output': response_output,
+                                 **({'usage': usage} if usage else {}),
++                                **generation_patch,
+                             },
+                         )
+ 
+@@ -3529,7 +3568,8 @@ async def non_streaming_chat_response_handler(response, ctx):
+                     ctx['assistant_message'] = {
+                         'content': content,
+                         'output': response_output,
+                         **({'usage': usage} if usage else {}),
++                        **generation_patch,
+                     }
+                     await outlet_filter_handler(ctx)
+ 
+@@ -3847,6 +3885,7 @@ async def streaming_chat_response_handler(response, ctx):
+ 
+             def full_output():
+                 return prior_output + output if prior_output else output
++            generation_trace = GenerationTrace.from_metadata(metadata, model=model, payload=form_data)
+ 
+             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
+             DETECT_REASONING_TAGS = reasoning_tags_param is not False
+@@ -3934,6 +3973,7 @@ async def streaming_chat_response_handler(response, ctx):
+                             )
+ 
+                             if data:
++                                observe_openai_stream_event(generation_trace, data)
+                                 if 'event' in data and not getattr(request.state, 'direct', False):
+                                     await event_emitter(data.get('event', {}))
+ 
+@@ -5043,12 +5083,20 @@ async def streaming_chat_response_handler(response, ctx):
+                     if not metadata['chat_id'].startswith('channel:')
+                     else ''
+                 )
++                final_content = serialize_output(output)
++                generation_patch = build_message_generation_patch(
++                    generation_trace,
++                    content=final_content,
++                    output=output,
++                    usage=usage,
++                )
+                 data = {
+                     'done': True,
+-                    'content': serialize_output(output),
++                    'content': final_content,
+                     'output': output,
+                     'title': title,
+                     **({'usage': usage} if usage else {}),
++                    **build_stream_completion_event(generation_patch),
+                 }
+ 
+                 if not metadata['chat_id'].startswith('channel:'):
+@@ -5059,22 +5107,23 @@ async def streaming_chat_response_handler(response, ctx):
+                             metadata['message_id'],
+                             {
+                                 'done': True,
+-                                'content': serialize_output(output),
++                                'content': final_content,
+                                 'output': output,
+                                 **({'usage': usage} if usage else {}),
++                                **generation_patch,
+                             },
+                         )
+                     elif usage:
+                         await Chats.upsert_message_to_chat_by_id_and_message_id(
+                             metadata['chat_id'],
+                             metadata['message_id'],
+-                            {'done': True, 'usage': usage},
++                            {'done': True, 'usage': usage, **generation_patch},
+                         )
+                     else:
+                         await Chats.upsert_message_to_chat_by_id_and_message_id(
+                             metadata['chat_id'],
+                             metadata['message_id'],
+-                            {'done': True},
++                            {'done': True, **generation_patch},
+                         )
+ 
+                 # Send a webhook notification if the user is not active
+@@ -5102,9 +5151,10 @@ async def streaming_chat_response_handler(response, ctx):
+ 
+                 await background_tasks_handler(ctx)
+                 ctx['assistant_message'] = {
+-                    'content': serialize_output(output),
++                    'content': final_content,
+                     'output': output,
+                     **({'usage': usage} if usage else {}),
++                    **generation_patch,
+                 }
+                 await outlet_filter_handler(ctx)
+             except asyncio.CancelledError:
+diff --git a/src/lib/components/chat/Chat.svelte b/src/lib/components/chat/Chat.svelte
+index 0000000..0000000 100644
+--- a/src/lib/components/chat/Chat.svelte
++++ b/src/lib/components/chat/Chat.svelte
+@@ -1730,7 +1730,21 @@
+ 	};
+ 
+ 	const chatCompletionEventHandler = async (data, message, chatId) => {
+-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
++		const {
++			id,
++			done,
++			choices,
++			content,
++			output,
++			sources,
++			selected_model_id,
++			error,
++			usage,
++			generation_status,
++			generation_reasons,
++			can_continue,
++			generation
++		} = data;
+ 
+ 		// Store raw OR-aligned output items from backend
+ 		if (output) {
+@@ -1831,6 +1846,22 @@
+ 			message.usage = usage;
+ 		}
+ 
++		if (generation_status) {
++			message.generation_status = generation_status;
++		}
++
++		if (generation_reasons) {
++			message.generation_reasons = generation_reasons;
++		}
++
++		if (can_continue !== undefined) {
++			message.can_continue = can_continue;
++		}
++
++		if (generation) {
++			message.generation = generation;
++		}
++
+ 		history.messages[message.id] = message;
+ 
+ 		if (done) {
+diff --git a/src/lib/components/chat/Messages/ResponseMessage.svelte b/src/lib/components/chat/Messages/ResponseMessage.svelte
+index 0000000..0000000 100644
+--- a/src/lib/components/chat/Messages/ResponseMessage.svelte
++++ b/src/lib/components/chat/Messages/ResponseMessage.svelte
+@@ -87,6 +87,10 @@
+ 		};
+ 		done: boolean;
+ 		error?: boolean | { content: string };
++		generation_status?: 'complete' | 'incomplete' | 'failed' | 'empty';
++		generation_reasons?: string[];
++		can_continue?: boolean;
++		generation?: Record<string, unknown>;
+ 		sources?: string[];
+ 		code_executions?: {
+ 			uuid: string;
+@@ -818,6 +822,8 @@
+ 							{#if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
+ 								<Skeleton />
++							{:else if message?.generation_status === 'empty' && message.done}
++								<div class="hidden" aria-hidden="true"></div>
+ 							{:else if message.content && message.error !== true}
+ 								<!-- always show message contents even if there's an error -->
+ 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+ 								<ContentRenderer
+@@ -886,6 +892,20 @@
+ 							{#if message.code_executions}
+ 								<CodeExecutions codeExecutions={message.code_executions} />
+ 							{/if}
++
++							{#if message?.generation_status === 'incomplete' && message?.can_continue && !readOnly}
++								<div
++									class="mt-2 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200"
++								>
++									<span>回答可能未完成</span>
++									<button
++										class="font-medium underline-offset-2 hover:underline"
++										on:click={() => continueResponse()}
++									>
++										继续生成
++									</button>
++								</div>
++							{/if}
+ 						</div>
+ 					</div>
+ 				</div>
+@@ -895,7 +914,7 @@
+ 						bind:this={buttonsContainerElement}
+ 						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+ 					>
+-						{#if message.done || siblings.length > 1}
++						{#if (message.done || siblings.length > 1) && message?.generation_status !== 'empty'}
+ 							{#if siblings.length > 1}
+ 								<div class="flex self-center min-w-fit" dir="ltr">
+ 									<button

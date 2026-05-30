@@ -2,6 +2,42 @@
 
 日期：2026-05-31
 
+## 0. 可执行接线补丁
+
+补丁文件：
+
+```text
+patches/open-webui-v0.9.5-generation-integrity-wiring.diff
+```
+
+接入顺序：
+
+1. 复制核心模块到目标 Open WebUI 源码：
+
+```sh
+cp -R source-patches/open-webui-v0.9.5/model-optimization-p0/backend/open_webui/model_optimization backend/open_webui/
+```
+
+2. 在目标 Open WebUI v0.9.5 源码根目录应用接线补丁：
+
+```sh
+git apply source-patches/open-webui-v0.9.5/model-optimization-p0/patches/open-webui-v0.9.5-generation-integrity-wiring.diff
+```
+
+3. 灰度开启长任务输出预算：
+
+```sh
+ENABLE_DYNAMIC_MAX_TOKENS=true
+```
+
+4. 回滚方式：
+
+```sh
+git apply -R source-patches/open-webui-v0.9.5/model-optimization-p0/patches/open-webui-v0.9.5-generation-integrity-wiring.diff
+```
+
+然后移除复制进去的 `backend/open_webui/model_optimization/` 目录。
+
 ## 1. 已确认的 Open WebUI v0.9.5 接入点
 
 后端：

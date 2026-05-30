@@ -27,10 +27,25 @@ Upstream commit: 3660bc00fd807deced3400a63bfa6db47811a3bb
 backend/open_webui/model_optimization/generation_integrity.py
 tests/model_optimization/test_generation_integrity.py
 PATCH_GUIDE.md
+patches/open-webui-v0.9.5-generation-integrity-wiring.diff
 ```
 
 The Python module is standalone and dependency-light so it can be copied into
 `backend/open_webui/model_optimization/` before wiring it into Open WebUI.
+
+## Integration Patch
+
+The wiring patch is scoped to Open WebUI v0.9.5 chat generation paths:
+
+- backend stream / non-stream completion handling
+- assistant message generation status persistence
+- dynamic long-output token budget hook
+- continuation instruction hook for `assistant_message_id`
+- frontend `generation_status / can_continue` propagation and incomplete hint
+
+Apply it only after copying `backend/open_webui/model_optimization/` into the
+target Open WebUI source tree. `ENABLE_DYNAMIC_MAX_TOKENS` is off by default and
+should be enabled by environment flag during gray release.
 
 ## Local Test
 
