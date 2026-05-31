@@ -155,9 +155,9 @@ style = r'''
   html.musk-webai-ui button[id^="model-selector"],
   html.musk-webai-ui [id^="model-selector"] button,
   html.musk-webai-ui [id^="model-selector"] {
-    font-size: 28px !important;
-    line-height: 36px !important;
-    font-weight: 650 !important;
+    font-size: 16px !important;
+    line-height: 22px !important;
+    font-weight: 620 !important;
     color: #374151 !important;
   }
 
@@ -202,7 +202,7 @@ style = r'''
 
   html.musk-webai-ui .musk-model-dropdown-footer-row {
     width: 100% !important;
-    min-height: 56px !important;
+    min-height: 48px !important;
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
@@ -212,7 +212,7 @@ style = r'''
     background: transparent !important;
     box-shadow: none !important;
     color: #111827 !important;
-    font-size: 16px !important;
+    font-size: 14.5px !important;
     line-height: 1.3 !important;
     font-weight: 600 !important;
     text-align: left !important;
@@ -234,8 +234,8 @@ style = r'''
 
   html.musk-webai-ui .musk-model-api-row {
     width: 100% !important;
-    height: 52px !important;
-    min-height: 52px !important;
+    height: 48px !important;
+    min-height: 48px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -248,7 +248,7 @@ style = r'''
     box-shadow: none !important;
     text-align: left !important;
     cursor: pointer !important;
-    font-size: 16px !important;
+    font-size: 14.5px !important;
     font-weight: 520 !important;
   }
 
@@ -277,7 +277,7 @@ style = r'''
   }
 
   html.musk-webai-ui .musk-model-api-row-name {
-    font-size: 16px !important;
+    font-size: 14.5px !important;
     line-height: 1.3 !important;
     font-weight: 520 !important;
   }
@@ -292,9 +292,13 @@ style = r'''
     border-radius: 999px !important;
     background: #eef2ff !important;
     color: #4f46e5 !important;
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     line-height: 1.25 !important;
     font-weight: 600 !important;
+  }
+
+  html.musk-webai-ui .musk-model-recommend-badge[hidden] {
+    display: none !important;
   }
 
   html.musk-webai-ui .musk-model-api-check {
@@ -1519,7 +1523,7 @@ runtime = r'''
     const applyPreferredModelLabel = () => {
       const preferred = getPreferredModel();
       if (!preferred?.id || !preferred.forceLabel) return;
-      if (!preferred.forceRequest && state.lastModelSelectorButton) {
+      if (state.lastModelSelectorButton) {
         applyModelLabelToButton(state.lastModelSelectorButton, preferred.name || preferred.id);
         return;
       }
@@ -1806,37 +1810,33 @@ runtime = r'''
       const nativeOption = findNativeModelOption(container, model);
       if (!nativeOption) return false;
       nativeOption.click();
-      setPreferredModel(model, { forceLabel: true, forceRequest: false });
-      applyModelLabelToButton(state.lastModelSelectorButton, getModelDisplayName(model));
       return true;
     };
 
     const selectApiModel = (model, row) => {
       row?.setAttribute('aria-busy', 'true');
-      primeNativeModelStore();
+      setPreferredModel(model, { forceLabel: true, forceRequest: true });
+      applyPreferredModelLabel();
+      document.querySelectorAll('.musk-model-api-row').forEach((item) => {
+        if (!(item instanceof HTMLElement)) return;
+        const selected = item.dataset.muskModelId === getModelId(model);
+        item.classList.toggle('is-selected', selected);
+        const check = item.querySelector('.musk-model-api-check');
+        if (check) check.textContent = selected ? '✓' : '';
+      });
+
       const dropdown = findModelDropdown();
-      if (dropdown && clickNativeModelOption(dropdown, model)) {
-        row?.removeAttribute('aria-busy');
-        return;
-      }
+      if (dropdown) clickNativeModelOption(dropdown, model);
 
       window.setTimeout(() => {
-        const refreshedDropdown = findModelDropdown() || dropdown;
-        if (refreshedDropdown && clickNativeModelOption(refreshedDropdown, model)) {
-          row?.removeAttribute('aria-busy');
-          return;
-        }
-
-        setPreferredModel(model, true);
-        applyPreferredModelLabel();
         closeModelDropdown();
         ensureStatusBanner(
           'musk-model-select-status',
-          `已选择 ${getModelDisplayName(model)}，后续对话会使用该模型。`,
+          `已选择 ${getModelDisplayName(model)}，后续对话将使用真实模型 ID。`,
           'info'
         );
         row?.removeAttribute('aria-busy');
-      }, 520);
+      }, 120);
     };
 
     const bindDropdownSearchFiltering = (container) => {
