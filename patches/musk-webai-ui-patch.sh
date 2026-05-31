@@ -165,6 +165,10 @@ style = r'''
     display: none !important;
   }
 
+  html.musk-webai-ui .musk-hidden-model-option {
+    display: none !important;
+  }
+
   html.musk-webai-ui .musk-model-dropdown {
     min-width: min(360px, calc(100vw - 24px)) !important;
   }
@@ -1153,6 +1157,9 @@ runtime = r'''
       .replace(/^模型\s*/i, '')
       .trim();
 
+    const isExternalBuiltInModel = (text) =>
+      /(^|[\s"'“”])Arena Model($|[\s"'“”])/i.test(cleanModelLabel(text));
+
     const getModelSelectorButtons = () => [
       ...document.querySelectorAll('button[id^="model-selector"], [id^="model-selector"] button')
     ].filter((button) => button instanceof HTMLElement);
@@ -1442,6 +1449,7 @@ runtime = r'''
     };
 
     const hideTopAddModelButton = () => {
+      if (isModelManagementPage()) return;
       document
         .querySelectorAll('button[aria-label="Add Model"], button[aria-label="添加模型"]')
         .forEach((button) => {
@@ -1451,8 +1459,23 @@ runtime = r'''
         });
     };
 
+    const isModelManagementPage = () =>
+      /^\/(?:admin\/settings\/models|workspace\/models)(?:\/|$)/.test(window.location.pathname);
+
+    const cleanupModelDropdownEnhancements = () => {
+      document
+        .querySelectorAll('.musk-model-dropdown-footer, .musk-model-api-list, .musk-model-dropdown-empty')
+        .forEach((el) => el.remove());
+      document
+        .querySelectorAll('.musk-model-dropdown, .musk-hidden-top-add-model')
+        .forEach((el) => {
+          el.classList.remove('musk-model-dropdown', 'musk-hidden-top-add-model');
+        });
+    };
+
     const isModelDropdownCandidate = (container, selectedModel) => {
       if (!(container instanceof HTMLElement)) return false;
+      if (isModelManagementPage()) return false;
       if (container.closest('nav, #sidebar, form, .musk-model-dropdown-footer')) return false;
       const rect = getVisibleRect(container);
       if (!rect || rect.width < 180 || rect.height < 48 || rect.height > window.innerHeight * 0.92) return false;
@@ -1468,6 +1491,7 @@ runtime = r'''
     };
 
     const findModelDropdown = () => {
+      if (isModelManagementPage()) return null;
       const selectedModel = getSelectedModelLabel();
       const searchInputs = [...document.querySelectorAll('input')].filter((input) => {
         const label = `${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''}`;
@@ -1500,10 +1524,21 @@ runtime = r'''
           return Boolean(getVisibleRect(el));
         })
         .map((el) => cleanModelLabel(el.textContent || el.getAttribute('aria-label') || el.getAttribute('data-value') || ''))
-        .filter((label) => label && !ignore.test(label));
+        .filter((label) => label && !ignore.test(label) && !isExternalBuiltInModel(label));
 
       if (!labels.length && selectedModel && noticeText(container).includes(selectedModel)) labels.push(selectedModel);
       return [...new Set(labels)];
+    };
+
+    const hideExternalBuiltInModelOptions = (container) => {
+      container
+        .querySelectorAll('[role="option"], button, [data-value], [cmdk-item]')
+        .forEach((el) => {
+          if (!(el instanceof HTMLElement)) return;
+          if (el.closest('.musk-model-dropdown-footer, .musk-model-api-list')) return;
+          const label = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-value') || ''}`;
+          el.classList.toggle('musk-hidden-model-option', isExternalBuiltInModel(label));
+        });
     };
 
     const ensureModelDropdownFooter = (container) => {
@@ -1512,11 +1547,12 @@ runtime = r'''
         footer = document.createElement('div');
         footer.className = 'musk-model-dropdown-footer';
         footer.innerHTML = `
-          <div class="musk-model-dropdown-footer-title">模型管理</div>
           <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="add">+ 添加模型</button>
-          <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="manage">管理模型</button>
         `;
         container.appendChild(footer);
+      } else {
+        footer.querySelector('.musk-model-dropdown-footer-title')?.remove();
+        footer.querySelector('[data-musk-model-action="manage"]')?.remove();
       }
 
       const addButton = footer.querySelector('[data-musk-model-action="add"]');
@@ -1525,21 +1561,10 @@ runtime = r'''
         addButton.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          const nativeAdd = findTopAddModelButton();
-          if (nativeAdd) {
-            nativeAdd.click();
-            schedulePolish();
-          }
-        });
-      }
-
-      const manageButton = footer.querySelector('[data-musk-model-action="manage"]');
-      if (manageButton && manageButton.dataset.muskBound !== '1') {
-        manageButton.dataset.muskBound = '1';
-        manageButton.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          window.location.assign('/workspace/models');
+          closeModelDropdown();
+          window.setTimeout(() => {
+            window.location.assign('/workspace/models');
+          }, 80);
         });
       }
     };
@@ -1547,6 +1572,7 @@ runtime = r'''
     const dropdownHasModel = (labels, model) => {
       const id = getModelId(model).toLowerCase();
       const name = getModelName(model).toLowerCase();
+      if (isExternalBuiltInModel(`${id} ${name}`)) return true;
       return labels.some((label) => {
         const value = label.toLowerCase();
         return value === id || value === name || value.includes(id) || value.includes(name);
@@ -1640,7 +1666,10 @@ runtime = r'''
         container.insertBefore(list, footer || null);
       }
 
-      const visibleModels = models.filter((model) => !dropdownHasModel(labels, model) || labels.length <= 1);
+      const visibleModels = models.filter((model) => {
+        if (isExternalBuiltInModel(`${getModelId(model)} ${getModelName(model)}`)) return false;
+        return !dropdownHasModel(labels, model) || labels.length <= 1;
+      });
       if (!visibleModels.length) {
         list.remove();
         return;
@@ -1680,11 +1709,16 @@ runtime = r'''
     };
 
     const enhanceModelDropdown = () => {
+      if (isModelManagementPage()) {
+        cleanupModelDropdownEnhancements();
+        return;
+      }
       const dropdown = findModelDropdown();
       if (!dropdown) return;
 
       dropdown.classList.add('musk-model-dropdown');
       primeNativeModelStore();
+      hideExternalBuiltInModelOptions(dropdown);
       const labels = getDropdownModelLabels(dropdown);
       renderApiModelsInDropdown(dropdown, labels);
       const selectedModel = getSelectedModelLabel();
