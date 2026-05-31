@@ -177,6 +177,10 @@ style = r'''
     display: none !important;
   }
 
+  html.musk-webai-ui .musk-model-status-artifact {
+    display: none !important;
+  }
+
   html.musk-webai-ui .musk-model-dropdown {
     width: min(360px, calc(100vw - 24px)) !important;
     min-width: min(360px, calc(100vw - 24px)) !important;
@@ -1147,6 +1151,28 @@ runtime = r'''
           anchor = anchor.parentElement;
         }
         row.insertBefore(button, anchor.nextSibling);
+      });
+    };
+
+    const markModelSelectionArtifacts = () => {
+      const isArtifactText = (text) => {
+        const value = String(text || '').trim().replace(/\s+/g, ' ');
+        return /^已选择 .+，后续对话将使用真实模型 ID。$/.test(value) ||
+          value === '好的，已了解。接下来我会按当前会话配置继续协助你。';
+      };
+
+      document.querySelectorAll('.musk-model-status-artifact').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        if (!isArtifactText(el.textContent || '')) el.classList.remove('musk-model-status-artifact');
+      });
+
+      document.querySelectorAll('#messages-container p, #messages-container .chat-user, #messages-container .prose').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        if (!isArtifactText(el.textContent || '')) return;
+        const block = el.closest('.user-message, .message-listitem, [data-message-id]') ||
+          el.closest('.group') ||
+          el;
+        if (block instanceof HTMLElement) block.classList.add('musk-model-status-artifact');
       });
     };
 
@@ -2459,6 +2485,7 @@ runtime = r'''
       markTableShells();
       markCodeBlocks();
       ensureAssistantShareButtons();
+      markModelSelectionArtifacts();
       markHomeEmptyState();
       restoreComposerDraft();
       generationWatchdog();
