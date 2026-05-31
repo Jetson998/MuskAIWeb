@@ -1880,11 +1880,7 @@ runtime = r'''
 
       window.setTimeout(() => {
         closeModelDropdown();
-        ensureStatusBanner(
-          'musk-model-select-status',
-          `已选择 ${getModelDisplayName(model)}，后续对话将使用真实模型 ID。`,
-          'info'
-        );
+        ensureStatusBanner('musk-model-select-status', '');
         row?.removeAttribute('aria-busy');
       }, 120);
     };
@@ -2453,6 +2449,7 @@ runtime = r'''
       ensureDefaultModel();
       hideTopAddModelButton();
       enhanceModelDropdown();
+      ensureStatusBanner('musk-model-select-status', '');
       applyPreferredModelLabel();
       replaceText();
       markComposer();
