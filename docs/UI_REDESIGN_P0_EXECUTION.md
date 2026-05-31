@@ -286,3 +286,39 @@ Remaining production hardening:
 - Add a domain and HTTPS/WSS reverse proxy before re-enabling websocket mode.
 - Pin `ghcr.io/open-webui/open-webui:main` to a stable release tag.
 - Fix startup persistence so the UI patch is applied after Open WebUI's build files are available, not only before `start.sh`.
+
+## 2026-05-31 P0.8 Startup Persistence Fix
+
+Executed after P0.7 revealed that a container restart initially served legacy injected HTML until the UI patch was manually re-applied.
+
+| Step | Status | Item | Evidence |
+| --- | --- | --- | --- |
+| 14.1 | done | Inspect existing startup hook | Compose still ran `sh /app/backend/data/brand-patch.sh; bash start.sh`, so patching happened only before the server process. |
+| 14.2 | done | Find legacy brand patch issue | `brand-patch.sh` currently fails syntax validation at line 315 due to corrupted historical self-persisted blocks. The new startup flow avoids calling it. |
+| 14.3 | done | Add startup wrapper | Installed `/app/backend/data/start-webai-with-patches.sh` and updated compose to `sh /app/backend/data/start-webai-with-patches.sh`. |
+| 14.4 | done | Delay UI patch after startup | Wrapper applies `/app/backend/data/musk-webai-ui-patch.sh` at 0s, 3s, 8s, 20s, and 45s, covering late frontend file writes. |
+| 14.5 | done | Restart verification | `docker compose restart open-webui` returned `healthy`; after delayed patching, version was `musk-webai-ui-1780161775`, style/runtime counts were `1/1`, and legacy count was `0`. |
+| 14.6 | done | Browser verification | Browser load showed `musk-webai-ui` active, no reconnect/disconnect notices, and no console errors. |
+
+Current operational note:
+
+- Do not run `/app/backend/data/brand-patch.sh` manually until it is cleaned or replaced; it can reintroduce legacy injections before failing.
+- The safe persistent startup path is now the new wrapper plus the standalone `musk-webai-ui-patch.sh`.
+
+## 2026-05-31 P0.9 Safe Brand Patch Replacement
+
+Executed after P0.8 confirmed the historical `brand-patch.sh` was corrupted and could reintroduce legacy injections if run manually.
+
+| Step | Status | Item | Evidence |
+| --- | --- | --- | --- |
+| 15.1 | done | Create safe replacement | Added `scripts/brand-patch-safe.sh`; it only performs stable brand/link text replacement and then delegates to `/app/backend/data/musk-webai-ui-patch.sh`. |
+| 15.2 | done | Local syntax check | `sh -n scripts/brand-patch-safe.sh` passed. |
+| 15.3 | done | Backup and replace production script | Replaced `/app/backend/data/brand-patch.sh`; backup saved as `/app/backend/data/brand-patch.sh.bak.safe.20260531013200`. |
+| 15.4 | done | Production dry run | New `brand-patch.sh` passed `sh -n`; dry run reported `safe_brand_patch_changed=0` and kept `style=1 runtime=1 legacy=0`. |
+| 15.5 | done | Restart verification | After `docker compose restart open-webui`, config stayed `enable_websocket=false`; version became `musk-webai-ui-1780162747`; counts stayed `style=1 runtime=1 legacy=0`. |
+| 15.6 | done | Browser verification | Browser loaded `Musk WebAI` with `musk-webai-ui` active, no reconnect/disconnect notices, and no console errors. |
+
+Current operational note:
+
+- `/app/backend/data/brand-patch.sh` is now safe to run; it no longer self-modifies and no longer carries historical brittle chunk patches.
+- The startup wrapper still handles normal restart persistence; `brand-patch.sh` is now a clean manual/compatibility entrypoint.

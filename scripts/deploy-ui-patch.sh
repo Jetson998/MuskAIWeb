@@ -9,6 +9,7 @@ PATCH_LOCAL="${1:-patches/musk-webai-ui-patch.sh}"
 REMOTE_PATCH="/tmp/musk-webai-ui-patch.sh"
 STAMP="$(date +%Y%m%d%H%M%S)"
 REMOTE="${WEBAI_USER}@${WEBAI_HOST}"
+SSH_OPTS="${SSH_OPTS:-}"
 
 if [ ! -f "$PATCH_LOCAL" ]; then
   echo "Patch file not found: $PATCH_LOCAL" >&2
@@ -16,10 +17,12 @@ if [ ! -f "$PATCH_LOCAL" ]; then
 fi
 
 echo "[deploy] copying $PATCH_LOCAL to $REMOTE:$REMOTE_PATCH"
-scp "$PATCH_LOCAL" "$REMOTE:$REMOTE_PATCH"
+# shellcheck disable=SC2086
+scp $SSH_OPTS "$PATCH_LOCAL" "$REMOTE:$REMOTE_PATCH"
 
 echo "[deploy] applying patch in container $WEBAI_CONTAINER"
-ssh "$REMOTE" \
+# shellcheck disable=SC2086
+ssh $SSH_OPTS "$REMOTE" \
   "WEBAI_CONTAINER='$WEBAI_CONTAINER' STAMP='$STAMP' PERSIST_UI_PATCH='$PERSIST_UI_PATCH' sh -s" <<'REMOTE_SH'
 set -eu
 
@@ -47,7 +50,22 @@ EOF
   '
 fi
 
-docker inspect -f '{{.State.Health.Status}}' "$WEBAI_CONTAINER"
+echo "== container health =="
+docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$WEBAI_CONTAINER"
+
+echo "== frontend version =="
+docker exec "$WEBAI_CONTAINER" sh -lc 'cat /app/build/_app/version.json; echo'
+
+echo "== injection counts =="
+docker exec "$WEBAI_CONTAINER" sh -lc "
+  printf 'style='
+  grep -o 'id=\"musk-webai-ui-polish\"' /app/build/index.html | wc -l | tr -d ' '
+  printf ' runtime='
+  grep -o 'id=\"musk-webai-ui-runtime\"' /app/build/index.html | wc -l | tr -d ' '
+  printf ' legacy='
+  grep -Eo 'id=\"musk-webai-sidebar-polish\"|id=\"musk-webai-runtime-polish\"' /app/build/index.html | wc -l | tr -d ' '
+  echo
+"
 REMOTE_SH
 
 echo "[deploy] done"

@@ -161,6 +161,129 @@ style = r'''
     color: #3f4652 !important;
   }
 
+  html.musk-webai-ui .musk-hidden-top-add-model {
+    display: none !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown {
+    min-width: min(360px, calc(100vw - 24px)) !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown-empty,
+  html.musk-webai-ui .musk-model-dropdown-footer-title {
+    padding: 8px 12px !important;
+    color: var(--musk-text-soft) !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    font-weight: 520 !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown-footer {
+    margin-top: 6px !important;
+    padding: 7px !important;
+    border-top: 1px solid rgba(230, 233, 238, 0.95) !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown-footer-row {
+    width: 100% !important;
+    min-height: 34px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 7px 9px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #303846 !important;
+    font-size: 13.5px !important;
+    line-height: 1.3 !important;
+    font-weight: 560 !important;
+    text-align: left !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown-footer-row:hover {
+    background: rgba(20, 24, 32, 0.055) !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-list {
+    margin: 4px 7px 2px !important;
+    padding: 4px 0 6px !important;
+    border-top: 1px solid rgba(232, 235, 241, 0.9) !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-list-title {
+    padding: 7px 6px 5px !important;
+    color: var(--musk-text-soft) !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    font-weight: 560 !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row {
+    width: 100% !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    padding: 8px 8px !important;
+    border: 0 !important;
+    border-radius: 9px !important;
+    background: transparent !important;
+    color: #303846 !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    cursor: pointer !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row:hover {
+    background: rgba(20, 24, 32, 0.055) !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row.is-selected {
+    background: rgba(47, 128, 237, 0.08) !important;
+    color: #1f5fbf !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row-main {
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row-name,
+  html.musk-webai-ui .musk-model-api-row-id {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row-name {
+    font-size: 13.5px !important;
+    line-height: 1.3 !important;
+    font-weight: 590 !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-row-id {
+    color: var(--musk-text-soft) !important;
+    font-size: 11.5px !important;
+    line-height: 1.2 !important;
+    font-weight: 500 !important;
+  }
+
+  html.musk-webai-ui .musk-model-api-check {
+    flex: 0 0 auto !important;
+    color: var(--musk-accent) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+
+  html.musk-webai-ui .musk-response-share-button {
+    color: inherit !important;
+  }
+
   html.musk-webai-ui main,
   html.musk-webai-ui [role="main"] {
     background: var(--musk-bg) !important;
@@ -344,6 +467,69 @@ style = r'''
     box-shadow: none !important;
   }
 
+  html.musk-webai-ui .musk-code-block-shell {
+    overflow: hidden !important;
+    border-radius: 14px !important;
+    border-color: rgba(226, 229, 235, 0.95) !important;
+  }
+
+  html.musk-webai-ui .musk-code-toolbar {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: 1 !important;
+    min-height: 36px !important;
+    padding: 7px 12px !important;
+    border-bottom: 1px solid rgba(226, 229, 235, 0.86) !important;
+    border-radius: 14px 14px 0 0 !important;
+    background: #ffffff !important;
+  }
+
+  html.musk-webai-ui .musk-code-toolbar button {
+    background: transparent !important;
+    border-radius: 7px !important;
+    color: #4b5563 !important;
+  }
+
+  html.musk-webai-ui .musk-code-toolbar button:hover {
+    background: rgba(20, 24, 32, 0.06) !important;
+    color: #111827 !important;
+  }
+
+  html.musk-webai-ui .musk-code-content {
+    margin-top: 0 !important;
+    border-radius: 0 0 14px 14px !important;
+    overflow: hidden !important;
+  }
+
+  html.musk-webai-ui .musk-code-content > div:first-child:empty {
+    display: none !important;
+  }
+
+  html.musk-webai-ui .musk-code-content pre,
+  html.musk-webai-ui .musk-code-content .cm-editor {
+    margin-top: 0 !important;
+    border-top: 0 !important;
+    border-radius: 0 0 14px 14px !important;
+  }
+
+  html.musk-webai-ui .musk-code-content .cm-editor,
+  html.musk-webai-ui .musk-code-content .cm-scroller,
+  html.musk-webai-ui .musk-code-content .cm-gutters {
+    background: #f3f3f1 !important;
+  }
+
+  html.musk-webai-ui .musk-code-content .cm-activeLine,
+  html.musk-webai-ui .musk-code-content .cm-activeLineGutter,
+  html.musk-webai-ui .musk-code-content .cm-line.cm-activeLine {
+    background: transparent !important;
+  }
+
+  html.musk-webai-ui .musk-code-content .cm-activeLineGutter {
+    color: inherit !important;
+  }
+
   html.musk-webai-ui .musk-thinking-block,
   html.musk-webai-ui [class*="thinking"],
   html.musk-webai-ui [class*="reasoning"],
@@ -495,12 +681,18 @@ style = r'''
     display: none !important;
   }
 
-  html.musk-webai-ui.musk-home-empty .musk-home-title {
+  html.musk-webai-ui.musk-home-empty .musk-home-static-title {
     font-size: 28px !important;
     line-height: 1.28 !important;
     font-weight: 680 !important;
     color: #172033 !important;
     letter-spacing: 0 !important;
+    text-align: center !important;
+    margin-bottom: 8px !important;
+  }
+
+  html.musk-webai-ui.musk-home-empty .musk-home-model-heading-hidden {
+    display: none !important;
   }
 
   html.musk-webai-ui.musk-home-empty .musk-home-suggestions {
@@ -677,6 +869,8 @@ runtime = r'''
     const CONNECTION_RECOVERY_RELOAD_MS = 22 * 1000;
     const CONNECTION_RECOVERY_RELOAD_COOLDOWN_MS = 2 * 60 * 1000;
     const CONNECTION_DRAFT_TTL_MS = 10 * 60 * 1000;
+    const MODEL_CACHE_TTL_MS = 45 * 1000;
+    const MODEL_PREFERENCE_KEY = 'musk:webai:selected-model';
     const state = {
       path: window.location.pathname,
       routeStartedAt: Date.now(),
@@ -687,6 +881,10 @@ runtime = r'''
       connectionRecoverySoftRouteAt: 0,
       connectionRecoveryProbePending: false,
       lastConnectionRecoveryAttemptAt: 0,
+      modelsCache: [],
+      modelsLoadedAt: 0,
+      modelsLoading: null,
+      lastNativeModelPrimeAt: 0,
       polishPending: false
     };
 
@@ -796,6 +994,146 @@ runtime = r'''
       });
     };
 
+    const getCurrentChatId = () => {
+      const match = window.location.pathname.match(/^\/c\/([^/?#]+)/);
+      return match ? decodeURIComponent(match[1]) : '';
+    };
+
+    const copyText = async (text) => {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', 'readonly');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      const ok = document.execCommand('copy');
+      input.remove();
+      return ok;
+    };
+
+    const shareChatDirectly = async () => {
+      const chatId = getCurrentChatId();
+      if (!chatId) {
+        ensureStatusBanner('musk-share-status', '当前为空会话，发送第一条消息后即可分享。');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/v1/chats/${encodeURIComponent(chatId)}/share`, {
+          method: 'POST',
+          headers: {
+            ...getAuthHeaders(),
+            'content-type': 'application/json'
+          },
+          credentials: 'include',
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error(`share ${response.status}`);
+        const payload = await response.json();
+        const shareId = payload?.share_id || payload?.id || payload?.data?.share_id;
+        if (!shareId) throw new Error('missing share id');
+        const url = `${window.location.origin}/s/${shareId}`;
+        await copyText(url);
+        ensureStatusBanner('musk-share-status', '分享链接已复制。', 'info');
+      } catch (error) {
+        console.warn('[Musk WebAI] share failed', error);
+        ensureStatusBanner('musk-share-status', '分享失败，请检查权限或稍后重试。', 'error');
+      }
+    };
+
+    const openShareFlow = () => {
+      const menuButton = document.getElementById('chat-context-menu-button');
+      if (!menuButton) {
+        shareChatDirectly();
+        return;
+      }
+
+      menuButton.click();
+      window.setTimeout(() => {
+        const shareButton = document.getElementById('chat-share-button') ||
+          [...document.querySelectorAll('button')].find((button) =>
+            !button.classList.contains('musk-response-share-button') && /^(分享|Share)$/i.test(noticeText(button))
+          );
+        if (shareButton) {
+          shareButton.click();
+        } else {
+          shareChatDirectly();
+        }
+      }, 120);
+    };
+
+    const createShareButton = () => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'musk-response-share-button p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition';
+      button.setAttribute('aria-label', '分享');
+      button.setAttribute('title', '分享');
+      button.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.3" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0-12.814a2.25 2.25 0 1 0 2.25 3.897 2.25 2.25 0 0 0-2.25-3.897Zm0 12.814a2.25 2.25 0 1 0 2.25 3.897 2.25 2.25 0 0 0-2.25-3.897Z" />
+        </svg>
+      `;
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openShareFlow();
+      });
+      return button;
+    };
+
+    const ensureAssistantShareButtons = () => {
+      if (!getCurrentChatId()) return;
+      document.querySelectorAll('.buttons').forEach((row) => {
+        if (!(row instanceof HTMLElement)) return;
+        if (row.querySelector('.musk-response-share-button')) return;
+        const copyButton = row.querySelector('.copy-response-button, button[aria-label="Copy"], button[aria-label="复制"]');
+        if (!copyButton) return;
+        const button = createShareButton();
+        let anchor = copyButton;
+        while (anchor.parentElement && anchor.parentElement !== row && anchor.parentElement.childElementCount === 1) {
+          anchor = anchor.parentElement;
+        }
+        row.insertBefore(button, anchor.nextSibling);
+      });
+    };
+
+    const markCodeBlocks = () => {
+      document.querySelectorAll('#response-content-container [class*="language-"]').forEach((content) => {
+        if (!(content instanceof HTMLElement)) return;
+        const shell = content.parentElement;
+        if (!(shell instanceof HTMLElement)) return;
+        const toolbar = [...shell.children].find((child) => {
+          if (!(child instanceof HTMLElement)) return false;
+          return child !== content && child.querySelector('.copy-code-button, .save-code-button, .run-code-button');
+        });
+        if (!(toolbar instanceof HTMLElement)) return;
+
+        shell.classList.add('musk-code-block-shell');
+        toolbar.classList.add('musk-code-toolbar');
+        content.classList.add('musk-code-content');
+
+        content.querySelectorAll('.cm-editor').forEach((editor) => {
+          if (!(editor instanceof HTMLElement) || editor.dataset.muskReadonlyNormalized === '1') return;
+          const lines = [...editor.querySelectorAll('.cm-line')]
+            .map((line) => line.textContent || '')
+            .join('\n');
+          if (!lines.trim()) return;
+          const pre = document.createElement('pre');
+          pre.className = 'hljs p-4 px-5 overflow-x-auto musk-readonly-code';
+          const code = document.createElement('code');
+          code.textContent = lines;
+          pre.appendChild(code);
+          editor.dataset.muskReadonlyNormalized = '1';
+          editor.replaceWith(pre);
+        });
+      });
+    };
+
     const getVisibleRect = (el) => {
       const rect = el.getBoundingClientRect();
       if (!rect.width || !rect.height) return null;
@@ -806,6 +1144,572 @@ runtime = r'''
     const noticeText = (el) => (el.textContent || el.getAttribute('aria-label') || '')
       .trim()
       .replace(/\s+/g, ' ');
+
+    const cleanModelLabel = (text) => String(text || '')
+      .replace(/\s+/g, ' ')
+      .replace(/[✓✔]/g, '')
+      .replace(/^已选择[:：]\s*/i, '')
+      .replace(/^Selected[:：]\s*/i, '')
+      .replace(/^模型\s*/i, '')
+      .trim();
+
+    const getModelSelectorButtons = () => [
+      ...document.querySelectorAll('button[id^="model-selector"], [id^="model-selector"] button')
+    ].filter((button) => button instanceof HTMLElement);
+
+    const getSelectedModelLabel = () => {
+      for (const button of getModelSelectorButtons()) {
+        const label = cleanModelLabel(button.getAttribute('aria-label') || button.textContent || '');
+        if (label && !/选择模型|Select model/i.test(label)) return label;
+      }
+      return '';
+    };
+
+    const getAuthHeaders = () => {
+      const token = localStorage.getItem('token') || localStorage.token || '';
+      return token ? { authorization: `Bearer ${token}` } : {};
+    };
+
+    const getModelId = (model) => String(model?.id || model?.model || model?.value || model?.name || '').trim();
+
+    const getModelName = (model) => String(model?.name || model?.label || getModelId(model)).trim();
+
+    const getModelSearchText = (model) => `${getModelId(model)} ${getModelName(model)}`.toLowerCase();
+
+    const modelIsActive = (model) => {
+      if (!model || typeof model !== 'object') return false;
+      if (Object.prototype.hasOwnProperty.call(model, 'is_active')) {
+        return model.is_active === true || model.is_active === 1 || model.is_active === '1';
+      }
+      if (Object.prototype.hasOwnProperty.call(model, 'active')) {
+        return model.active === true || model.active === 1 || model.active === '1';
+      }
+      return !(model?.info?.meta?.hidden || model?.meta?.hidden || model?.hidden);
+    };
+
+    const getModelsArray = (payload) => Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload?.data?.items)
+            ? payload.data.items
+            : Array.isArray(payload?.models)
+              ? payload.models
+              : Array.isArray(payload?.data?.models)
+                ? payload.data.models
+                : [];
+
+    const getModelsTotal = (payload) => {
+      const total = payload?.total ?? payload?.data?.total ?? payload?.meta?.total ?? payload?.data?.meta?.total;
+      return typeof total === 'number' ? total : null;
+    };
+
+    const normalizeModelsResponse = (payload) => {
+      const raw = getModelsArray(payload);
+      const seen = new Set();
+      return raw
+        .filter(modelIsActive)
+        .map((model) => ({
+          ...model,
+          id: getModelId(model),
+          name: getModelName(model)
+        }))
+        .filter((model) => {
+          if (!model.id || seen.has(model.id)) return false;
+          seen.add(model.id);
+          return true;
+        });
+    };
+
+    const mergeModels = (...groups) => {
+      const seen = new Set();
+      const merged = [];
+      groups.flat().forEach((model) => {
+        const id = getModelId(model);
+        if (!id || seen.has(id)) return;
+        seen.add(id);
+        merged.push({
+          ...model,
+          id,
+          name: getModelName(model)
+        });
+      });
+      return merged;
+    };
+
+    const fetchJson = async (url) => {
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error(`${url} ${response.status}`);
+      return response.json();
+    };
+
+    const fetchManagementModels = async () => {
+      const all = [];
+      let page = 1;
+      let total = null;
+
+      while (page <= 5) {
+        const payload = await fetchJson(`/api/v1/models/list?page=${page}`);
+        const pageItems = getModelsArray(payload);
+        const items = normalizeModelsResponse(payload);
+        all.push(...items.map((model) => ({ ...model, source: 'model-management' })));
+        total = getModelsTotal(payload) ?? total;
+        if (!pageItems.length) break;
+        if (total !== null && all.length >= total) break;
+        page += 1;
+      }
+
+      return all;
+    };
+
+    const fetchAvailableModels = (force = false) => {
+      const fresh = Date.now() - state.modelsLoadedAt < MODEL_CACHE_TTL_MS;
+      if (!force && fresh && state.modelsCache.length) return Promise.resolve(state.modelsCache);
+      if (state.modelsLoading) return state.modelsLoading;
+
+      state.modelsLoading = Promise.allSettled([
+        fetchJson('/api/models?refresh=true').then(normalizeModelsResponse),
+        fetchManagementModels()
+      ])
+        .then((results) => {
+          results
+            .filter((result) => result.status === 'rejected')
+            .forEach((result) => console.warn('[Musk WebAI] model source failed', result.reason));
+          const groups = results
+            .filter((result) => result.status === 'fulfilled')
+            .map((result) => result.value);
+          const models = mergeModels(...groups);
+          state.modelsCache = models;
+          state.modelsLoadedAt = Date.now();
+          window.dispatchEvent(new CustomEvent('musk:models-loaded', { detail: { models } }));
+          return models;
+        })
+        .catch((error) => {
+          console.warn('[Musk WebAI] model refresh failed', error);
+          return state.modelsCache;
+        })
+        .finally(() => {
+          state.modelsLoading = null;
+        });
+
+      return state.modelsLoading;
+    };
+
+    const primeNativeModelStore = () => {
+      const now = Date.now();
+      if (now - state.lastNativeModelPrimeAt < 900) return;
+      state.lastNativeModelPrimeAt = now;
+      const needsRuntimeRefresh = !state.modelsCache.length || now - state.modelsLoadedAt >= MODEL_CACHE_TTL_MS;
+      getModelSelectorButtons().forEach((button) => {
+        const target = button.querySelector('div') || button;
+        ['mouseenter', 'mouseover', 'pointerenter'].forEach((type) => {
+          target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        });
+      });
+      fetchAvailableModels(false).then(() => {
+        if (needsRuntimeRefresh) schedulePolish();
+      });
+    };
+
+    const bindModelSelectorRefresh = () => {
+      getModelSelectorButtons().forEach((button) => {
+        if (button.dataset.muskModelRefreshBound === '1') return;
+        button.dataset.muskModelRefreshBound = '1';
+        ['pointerdown', 'focus', 'click'].forEach((type) => {
+          button.addEventListener(type, () => primeNativeModelStore(), { passive: true });
+        });
+      });
+    };
+
+    const bindNativeModelSelectionTracking = () => {
+      if (document.documentElement.dataset.muskNativeModelTrackingBound === '1') return;
+      document.documentElement.dataset.muskNativeModelTrackingBound = '1';
+      document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const dropdown = target?.closest?.('.musk-model-dropdown');
+        if (!dropdown || target.closest('.musk-model-api-list, .musk-model-dropdown-footer')) return;
+        const row = target.closest('[role="option"], button, [data-value], [cmdk-item]');
+        if (!(row instanceof HTMLElement)) return;
+        const label = cleanModelLabel(`${row.textContent || ''} ${row.getAttribute('aria-label') || ''} ${row.getAttribute('data-value') || ''}`).toLowerCase();
+        const match = state.modelsCache.find((model) => {
+          const id = getModelId(model).toLowerCase();
+          const name = getModelName(model).toLowerCase();
+          return label === id || label === name || label.includes(id) || label.includes(name);
+        });
+        if (match) setPreferredModel(match, false);
+      }, true);
+    };
+
+    const getPreferredModel = () => {
+      try {
+        const value = sessionStorage.getItem(MODEL_PREFERENCE_KEY);
+        return value ? JSON.parse(value) : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const setPreferredModel = (model, forceLabel = false) => {
+      const normalized = { id: getModelId(model), name: getModelName(model), forceLabel };
+      if (!normalized.id) return;
+      sessionStorage.setItem(MODEL_PREFERENCE_KEY, JSON.stringify(normalized));
+    };
+
+    const applyPreferredModelLabel = () => {
+      const preferred = getPreferredModel();
+      if (!preferred?.id || !preferred.forceLabel) return;
+      getModelSelectorButtons().forEach((button) => {
+        const target = button.querySelector('div') || button;
+        const label = preferred.name || preferred.id;
+        if (!target || noticeText(target).includes(label)) return;
+        const svg = target.querySelector('svg');
+        target.textContent = label;
+        if (svg) target.appendChild(svg);
+        button.setAttribute('aria-label', `Selected model: ${label}`);
+      });
+    };
+
+    const isChatCompletionRequest = (input) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      return /\/api\/(chat\/completions|v1\/chat\/completions|v1\/chats\/completion|chat\/completion)/i.test(url);
+    };
+
+    const installPreferredModelFetchPatch = () => {
+      if (window.__muskPreferredModelFetchPatched) return;
+      window.__muskPreferredModelFetchPatched = true;
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const preferred = getPreferredModel();
+        if (!preferred?.id || !isChatCompletionRequest(input)) return nativeFetch(input, init);
+
+        try {
+          const nextInit = { ...init };
+          const body = nextInit.body;
+          if (typeof body === 'string' && body.trim().startsWith('{')) {
+            const payload = JSON.parse(body);
+            if (payload && typeof payload === 'object') {
+              payload.model = preferred.id;
+              if (Array.isArray(payload.models)) payload.models = [preferred.id];
+              nextInit.body = JSON.stringify(payload);
+              return nativeFetch(input, nextInit);
+            }
+          }
+        } catch (error) {
+          console.warn('[Musk WebAI] preferred model patch skipped', error);
+        }
+
+        return nativeFetch(input, init);
+      };
+    };
+
+    const isLikelyTopAddModelButton = (button) => {
+      if (!(button instanceof HTMLElement)) return false;
+      const label = noticeText(button);
+      if (!/^(Add Model|添加模型)$/i.test(label)) return false;
+      if (button.closest('#sidebar, form, [role="dialog"], [role="menu"], [role="listbox"], .musk-model-dropdown')) {
+        return false;
+      }
+
+      const nav = button.closest('nav');
+      const rect = button.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+
+      const modelButtons = getModelSelectorButtons();
+      const nearModelSelector = modelButtons.some((modelButton) => {
+        const modelRect = modelButton.getBoundingClientRect();
+        if (!modelRect.width || !modelRect.height) return false;
+        const verticalDelta = Math.abs((rect.top + rect.height / 2) - (modelRect.top + modelRect.height / 2));
+        const horizontalGap = rect.left - modelRect.right;
+        return verticalDelta <= 28 && horizontalGap >= -8 && horizontalGap <= 72;
+      });
+
+      return Boolean(nav && nearModelSelector);
+    };
+
+    const findTopAddModelButton = () => {
+      const candidates = [
+        ...document.querySelectorAll('button[aria-label="Add Model"], button[aria-label="添加模型"]')
+      ].filter((button) => button instanceof HTMLElement);
+      return candidates.find((button) => button.classList.contains('musk-hidden-top-add-model')) ||
+        candidates.find(isLikelyTopAddModelButton) ||
+        null;
+    };
+
+    const hideTopAddModelButton = () => {
+      document
+        .querySelectorAll('button[aria-label="Add Model"], button[aria-label="添加模型"]')
+        .forEach((button) => {
+          if (!(button instanceof HTMLElement)) return;
+          const shouldHide = button.classList.contains('musk-hidden-top-add-model') || isLikelyTopAddModelButton(button);
+          button.classList.toggle('musk-hidden-top-add-model', shouldHide);
+        });
+    };
+
+    const isModelDropdownCandidate = (container, selectedModel) => {
+      if (!(container instanceof HTMLElement)) return false;
+      if (container.closest('nav, #sidebar, form, .musk-model-dropdown-footer')) return false;
+      const rect = getVisibleRect(container);
+      if (!rect || rect.width < 180 || rect.height < 48 || rect.height > window.innerHeight * 0.92) return false;
+      const text = noticeText(container);
+      const hasModelSearch = /搜索模型|Search Models?|Search models?/i.test(text) ||
+        [...container.querySelectorAll('input')].some((input) => {
+          const inputLabel = `${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''}`;
+          return /搜索模型|Search Models?|Search models?/i.test(inputLabel);
+        });
+      if (!hasModelSearch) return false;
+      const hasModelOption = Boolean(container.querySelector('[role="option"], button, [data-value], [cmdk-item]'));
+      return hasModelOption || Boolean(selectedModel && text.includes(selectedModel));
+    };
+
+    const findModelDropdown = () => {
+      const selectedModel = getSelectedModelLabel();
+      const searchInputs = [...document.querySelectorAll('input')].filter((input) => {
+        const label = `${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''}`;
+        return /搜索模型|Search Models?|Search models?/i.test(label);
+      });
+
+      for (const input of searchInputs) {
+        let parent = input.parentElement;
+        while (parent && parent !== document.body) {
+          if (isModelDropdownCandidate(parent, selectedModel)) return parent;
+          parent = parent.parentElement;
+        }
+      }
+
+      const candidates = [
+        ...document.querySelectorAll('[role="listbox"], [role="menu"], [role="dialog"], [data-headlessui-state], [data-radix-popper-content-wrapper], [class*="popover"], [class*="Popover"], [class*="dropdown"], [class*="Dropdown"]')
+      ];
+      return candidates.find((container) => isModelDropdownCandidate(container, selectedModel)) || null;
+    };
+
+    const getDropdownModelLabels = (container) => {
+      const ignore = /(搜索模型|Search Models?|Search models?|添加模型|Add Model|管理模型|Manage Models?|模型管理|暂无其他|当前模型|可用模型|选择模型|Select model|Remove Model|设为默认|更多选项|More options?)/i;
+      const selectedModel = getSelectedModelLabel();
+      const labels = [
+        ...container.querySelectorAll('[role="option"], button, [data-value], [cmdk-item]')
+      ]
+        .filter((el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          if (el.closest('.musk-model-dropdown-footer')) return false;
+          return Boolean(getVisibleRect(el));
+        })
+        .map((el) => cleanModelLabel(el.textContent || el.getAttribute('aria-label') || el.getAttribute('data-value') || ''))
+        .filter((label) => label && !ignore.test(label));
+
+      if (!labels.length && selectedModel && noticeText(container).includes(selectedModel)) labels.push(selectedModel);
+      return [...new Set(labels)];
+    };
+
+    const ensureModelDropdownFooter = (container) => {
+      let footer = container.querySelector('.musk-model-dropdown-footer');
+      if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'musk-model-dropdown-footer';
+        footer.innerHTML = `
+          <div class="musk-model-dropdown-footer-title">模型管理</div>
+          <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="add">+ 添加模型</button>
+          <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="manage">管理模型</button>
+        `;
+        container.appendChild(footer);
+      }
+
+      const addButton = footer.querySelector('[data-musk-model-action="add"]');
+      if (addButton && addButton.dataset.muskBound !== '1') {
+        addButton.dataset.muskBound = '1';
+        addButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const nativeAdd = findTopAddModelButton();
+          if (nativeAdd) {
+            nativeAdd.click();
+            schedulePolish();
+          }
+        });
+      }
+
+      const manageButton = footer.querySelector('[data-musk-model-action="manage"]');
+      if (manageButton && manageButton.dataset.muskBound !== '1') {
+        manageButton.dataset.muskBound = '1';
+        manageButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          window.location.assign('/workspace/models');
+        });
+      }
+    };
+
+    const dropdownHasModel = (labels, model) => {
+      const id = getModelId(model).toLowerCase();
+      const name = getModelName(model).toLowerCase();
+      return labels.some((label) => {
+        const value = label.toLowerCase();
+        return value === id || value === name || value.includes(id) || value.includes(name);
+      });
+    };
+
+    const findNativeModelOption = (container, model) => {
+      const id = getModelId(model).toLowerCase();
+      const name = getModelName(model).toLowerCase();
+      const options = [
+        ...container.querySelectorAll('[role="option"], button, [data-value], [cmdk-item]')
+      ].filter((el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        if (el.closest('.musk-model-dropdown-footer, .musk-model-api-list')) return false;
+        return Boolean(getVisibleRect(el));
+      });
+      return options.find((el) => {
+        const value = cleanModelLabel(`${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-value') || ''}`).toLowerCase();
+        return value === id || value === name || value.includes(id) || value.includes(name);
+      }) || null;
+    };
+
+    const closeModelDropdown = () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+    };
+
+    const clickNativeModelOption = (container, model) => {
+      const nativeOption = findNativeModelOption(container, model);
+      if (!nativeOption) return false;
+      nativeOption.click();
+      setPreferredModel(model, false);
+      return true;
+    };
+
+    const selectApiModel = (model, row) => {
+      row?.setAttribute('aria-busy', 'true');
+      primeNativeModelStore();
+      const dropdown = findModelDropdown();
+      if (dropdown && clickNativeModelOption(dropdown, model)) {
+        row?.removeAttribute('aria-busy');
+        return;
+      }
+
+      window.setTimeout(() => {
+        const refreshedDropdown = findModelDropdown() || dropdown;
+        if (refreshedDropdown && clickNativeModelOption(refreshedDropdown, model)) {
+          row?.removeAttribute('aria-busy');
+          return;
+        }
+
+        setPreferredModel(model, true);
+        applyPreferredModelLabel();
+        closeModelDropdown();
+        ensureStatusBanner(
+          'musk-model-select-status',
+          `已选择 ${getModelName(model)}，新对话会使用该模型。`,
+          'info'
+        );
+        row?.removeAttribute('aria-busy');
+      }, 520);
+    };
+
+    const bindDropdownSearchFiltering = (container) => {
+      const input = container.querySelector('input');
+      if (!input || input.dataset.muskModelSearchBound === '1') return;
+      input.dataset.muskModelSearchBound = '1';
+      input.addEventListener('input', () => {
+        const query = input.value.trim().toLowerCase();
+        container.querySelectorAll('.musk-model-api-row').forEach((row) => {
+          const match = !query || (row.dataset.muskSearchText || '').includes(query);
+          row.style.display = match ? '' : 'none';
+        });
+      });
+    };
+
+    const renderApiModelsInDropdown = (container, labels) => {
+      let list = container.querySelector('.musk-model-api-list');
+      const hasLoaded = state.modelsLoadedAt > 0;
+      const models = state.modelsCache;
+      const selectedLabel = getSelectedModelLabel().toLowerCase();
+
+      if (!hasLoaded && !models.length) {
+        fetchAvailableModels(false).then(() => schedulePolish());
+        return;
+      }
+
+      if (!list) {
+        list = document.createElement('div');
+        list.className = 'musk-model-api-list';
+        const footer = container.querySelector('.musk-model-dropdown-footer');
+        container.insertBefore(list, footer || null);
+      }
+
+      const visibleModels = models.filter((model) => !dropdownHasModel(labels, model) || labels.length <= 1);
+      if (!visibleModels.length) {
+        list.remove();
+        return;
+      }
+
+      list.innerHTML = '<div class="musk-model-api-list-title">可用模型</div>';
+      visibleModels.forEach((model) => {
+        const id = getModelId(model);
+        const name = getModelName(model);
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'musk-model-api-row';
+        row.dataset.muskModelId = id;
+        row.dataset.muskSearchText = getModelSearchText(model);
+        if (selectedLabel && (selectedLabel.includes(id.toLowerCase()) || selectedLabel.includes(name.toLowerCase()))) {
+          row.classList.add('is-selected');
+        }
+        row.innerHTML = `
+          <span class="musk-model-api-row-main">
+            <span class="musk-model-api-row-name"></span>
+            <span class="musk-model-api-row-id"></span>
+          </span>
+          <span class="musk-model-api-check" aria-hidden="true"></span>
+        `;
+        row.querySelector('.musk-model-api-row-name').textContent = name;
+        row.querySelector('.musk-model-api-row-id').textContent = id === name ? '' : id;
+        row.querySelector('.musk-model-api-check').textContent = row.classList.contains('is-selected') ? '✓' : '';
+        row.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectApiModel(model, row);
+        });
+        list.appendChild(row);
+      });
+
+      bindDropdownSearchFiltering(container);
+    };
+
+    const enhanceModelDropdown = () => {
+      const dropdown = findModelDropdown();
+      if (!dropdown) return;
+
+      dropdown.classList.add('musk-model-dropdown');
+      primeNativeModelStore();
+      const labels = getDropdownModelLabels(dropdown);
+      renderApiModelsInDropdown(dropdown, labels);
+      const selectedModel = getSelectedModelLabel();
+      const isSelectedModelRow = (label) => selectedModel &&
+        (label === selectedModel || label.includes(selectedModel) || selectedModel.includes(label));
+      const hasLoadedModels = state.modelsLoadedAt > 0;
+      const hasApiOtherModel = hasLoadedModels && state.modelsCache.length > 1;
+      const hasOtherModel = hasApiOtherModel ||
+        labels.some((label) => selectedModel ? !isSelectedModelRow(label) : true);
+      let empty = dropdown.querySelector('.musk-model-dropdown-empty');
+
+      if (hasLoadedModels && !hasOtherModel) {
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'musk-model-dropdown-empty';
+          empty.textContent = '暂无其他可切换模型';
+          const existingFooter = dropdown.querySelector('.musk-model-dropdown-footer');
+          dropdown.insertBefore(empty, existingFooter || null);
+        }
+      } else if (empty) {
+        empty.remove();
+      }
+
+      ensureModelDropdownFooter(dropdown);
+    };
 
     const ensureStatusBanner = (id, text, kind = 'info') => {
       let banner = document.getElementById(id);
@@ -1075,10 +1979,13 @@ runtime = r'''
       state.connectionRecoveryProbePending = true;
       state.lastConnectionRecoveryAttemptAt = now;
 
-      fetch(`/api/version?musk_reconnect_probe=${now}`, {
+      const probe = (url) => fetch(url, {
         cache: 'no-store',
         credentials: 'include'
-      })
+      });
+
+      probe(`/api/version?musk_reconnect_probe=${now}`)
+        .catch(() => probe(`/_app/version.json?musk_reconnect_probe=${now}`))
         .then((response) => {
           if (!response.ok) throw new Error('probe failed');
           const reloadKey = `musk:webai:connection-reload:${window.location.pathname}`;
@@ -1142,6 +2049,69 @@ runtime = r'''
       });
     };
 
+    const ensureHomeStaticTitle = () => {
+      const selectedModel = getSelectedModelLabel();
+      const helpText = [...document.querySelectorAll('p, div, span')]
+        .find((el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          if (el.closest('nav, #sidebar, form, button, .musk-model-dropdown, [role="listbox"], [role="menu"], [role="dialog"]')) return false;
+          const text = noticeText(el);
+          if (!/^(有什么我能帮您的吗？|有什么我能帮您的吗\?|How can I help you\??)$/i.test(text)) return false;
+          const rect = getVisibleRect(el);
+          return Boolean(rect && rect.top > 80 && rect.width > 180);
+        });
+
+      let container = helpText?.parentElement || null;
+      let insertBefore = helpText || null;
+      let modelBlock = null;
+
+      if (!container && selectedModel) {
+        const modelNode = [...document.querySelectorAll('div, span, h1, h2')]
+          .find((el) => {
+            if (!(el instanceof HTMLElement)) return false;
+            if (el.closest('nav, #sidebar, form, button, .musk-model-dropdown, [role="listbox"], [role="menu"], [role="dialog"]')) return false;
+            if (noticeText(el) !== selectedModel) return false;
+            const rect = getVisibleRect(el);
+            return Boolean(rect && rect.top > 80 && rect.width > 120);
+          });
+
+        if (modelNode) {
+          modelBlock = modelNode;
+          while (
+            modelBlock.parentElement &&
+            modelBlock.parentElement !== document.body &&
+            !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
+            noticeText(modelBlock.parentElement).includes(selectedModel)
+          ) {
+            modelBlock = modelBlock.parentElement;
+          }
+          container = modelBlock.parentElement;
+          insertBefore = modelBlock;
+        }
+      }
+
+      if (!container) return;
+      let title = container.querySelector('.musk-home-static-title');
+      if (!title) {
+        title = document.createElement('div');
+        title.className = 'musk-home-static-title';
+        title.textContent = '今天要完成什么工作？';
+        container.insertBefore(title, insertBefore);
+      }
+
+      if (modelBlock instanceof HTMLElement) {
+        modelBlock.classList.add('musk-home-model-heading-hidden');
+      }
+
+      [...container.children].forEach((child) => {
+        if (!(child instanceof HTMLElement) || child === title || child === helpText) return;
+        const text = noticeText(child);
+        const isModelHeading = selectedModel &&
+          (text === selectedModel || text.includes(selectedModel) || selectedModel.includes(text));
+        child.classList.toggle('musk-home-model-heading-hidden', Boolean(isModelHeading));
+      });
+    };
+
     const markHomeEmptyState = () => {
       const isHome = window.location.pathname === '/';
       document.documentElement.classList.toggle('musk-home-empty', isHome);
@@ -1153,37 +2123,27 @@ runtime = r'''
       const input = document.getElementById('chat-input');
       if (!input) return;
 
-      const selectedModel = document
-        .querySelector('button[id^="model-selector"], [id^="model-selector"] button, [id^="model-selector"]')
-        ?.textContent?.trim();
-
-      if (selectedModel) {
-        [...document.querySelectorAll('div, h1, h2, p, span')]
-          .filter((el) => {
-            const text = (el.textContent || '').trim();
-            if (text !== selectedModel) return false;
-            if (el.closest('nav, #sidebar, button')) return false;
-            const rect = el.getBoundingClientRect();
-            return rect.width > 160 && rect.height > 24;
-          })
-          .forEach((el) => {
-            el.textContent = '今天要完成什么工作？';
-            el.classList.add('musk-home-title');
-          });
-      }
-
+      ensureHomeStaticTitle();
       markHomeSuggestions();
     };
 
     const polish = () => {
       document.documentElement.classList.add('musk-webai-ui');
+      installPreferredModelFetchPatch();
       hideNativeSearch();
+      bindModelSelectorRefresh();
+      bindNativeModelSelectionTracking();
+      hideTopAddModelButton();
+      enhanceModelDropdown();
+      applyPreferredModelLabel();
       replaceText();
       markComposer();
       markThinking();
       markUserMessages();
       markActiveSidebarLink();
       markTableShells();
+      markCodeBlocks();
+      ensureAssistantShareButtons();
       markHomeEmptyState();
       restoreComposerDraft();
       generationWatchdog();
@@ -1204,6 +2164,11 @@ runtime = r'''
     document.addEventListener('DOMContentLoaded', schedulePolish);
     window.addEventListener('popstate', schedulePolish);
     window.addEventListener('hashchange', schedulePolish);
+    window.addEventListener('online', schedulePolish);
+    window.addEventListener('offline', schedulePolish);
+    window.addEventListener('focus', schedulePolish);
+    document.addEventListener('visibilitychange', schedulePolish);
+    window.setInterval(schedulePolish, 2000);
     new MutationObserver(schedulePolish).observe(document.documentElement, {
       childList: true,
       subtree: true,

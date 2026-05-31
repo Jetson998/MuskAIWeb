@@ -42,18 +42,18 @@ Important production behavior:
 - `WEBUI_NAME` is set to `Musk WebAI`.
 - `ENABLE_PERSISTENT_CONFIG=false` is used so selected UI defaults can be controlled from environment variables.
 - `DEFAULT_PROMPT_SUGGESTIONS` contains the three homepage starters.
-- The container command runs the startup branding patch before `start.sh`.
+- The container command runs a startup wrapper that reapplies the UI patch after `start.sh` begins.
 
 The production command pattern is:
 
 ```yaml
 command: >-
-  sh -lc "sh /app/backend/data/brand-patch.sh; bash start.sh"
+  sh /app/backend/data/start-webai-with-patches.sh
 ```
 
 ## Branding Patch
 
-The runtime branding patch is stored in the Open WebUI data volume:
+The historical runtime branding patch is stored in the Open WebUI data volume:
 
 ```text
 /var/lib/docker/volumes/open-webui_open-webui/_data/brand-patch.sh
@@ -65,7 +65,21 @@ Inside the container it is available as:
 /app/backend/data/brand-patch.sh
 ```
 
-The patch currently handles:
+It is currently not part of the startup path because historical self-persisted blocks have corrupted the script around line 315. Do not run it manually until it is cleaned or replaced.
+
+The active persistent UI startup wrapper is:
+
+```text
+/app/backend/data/start-webai-with-patches.sh
+```
+
+The wrapper reapplies:
+
+```text
+/app/backend/data/musk-webai-ui-patch.sh
+```
+
+The historical branding patch used to handle:
 
 - Replacing visible Open WebUI branding strings with Musk WebAI.
 - Preventing backend `WEBUI_NAME` from appending `(Open WebUI)`.
@@ -73,7 +87,7 @@ The patch currently handles:
 - Disabling the `/workspace/models` community discovery block.
 - Clearing model-page community discovery text.
 
-After image upgrades, restart the container so the patch re-applies to the fresh image filesystem.
+After image upgrades, restart the container so the startup wrapper reapplies the fresh UI patch to the image filesystem.
 
 ## P0 UI Polish Patch
 
@@ -131,7 +145,7 @@ WEBAI_CONTAINER=open-webui
 PERSIST_UI_PATCH=false
 ```
 
-Set `PERSIST_UI_PATCH=true` only when the patch should also be called from `/app/backend/data/brand-patch.sh` on future container recreates.
+Do not set `PERSIST_UI_PATCH=true` while `/app/backend/data/brand-patch.sh` remains corrupted. Use the startup wrapper instead.
 
 Manual deployment options:
 
@@ -149,7 +163,7 @@ docker cp patches/musk-webai-ui-patch.sh open-webui:/tmp/musk-webai-ui-patch.sh
 docker exec open-webui sh /tmp/musk-webai-ui-patch.sh
 ```
 
-2. For persistence across container recreates, copy it into the data volume and call it from `/app/backend/data/brand-patch.sh` after the existing branding logic:
+2. For persistence across container restarts/recreates, copy it into the data volume and use `/app/backend/data/start-webai-with-patches.sh` as the compose command. The wrapper calls:
 
 ```sh
 sh /app/backend/data/musk-webai-ui-patch.sh
@@ -165,7 +179,7 @@ docker exec open-webui sh /tmp/musk-webai-ui-rollback.sh
 Current production P0 deployment:
 
 ```text
-Frontend version: musk-webai-ui-1780159013
+Frontend version: musk-webai-ui-1780162747
 brand-patch backup: /app/backend/data/brand-patch.sh.bak.20260530233649
 Persistent hook: /app/backend/data/brand-patch.sh lines 1300-1304
 Rollback helper: /app/backend/data/musk-webai-ui-rollback.sh
@@ -193,7 +207,9 @@ Current production transport:
 - `ENABLE_WEBSOCKET_SUPPORT=false` is set in `/opt/open-webui/docker-compose.yml`.
 - `/api/config` returns `features.enable_websocket=false`.
 - Socket.IO now accepts polling transport and rejects direct websocket transport.
-- The UI patch had to be re-applied after the container restart; the startup hook should be revisited so future restarts keep the latest UI patch without a manual re-apply.
+- The startup command now runs `/app/backend/data/start-webai-with-patches.sh`, which applies `/app/backend/data/musk-webai-ui-patch.sh` at 0s, 3s, 8s, 20s, and 45s after startup.
+- `/app/backend/data/brand-patch.sh` has been replaced with the safe version from `scripts/brand-patch-safe.sh`; the corrupted historical script was backed up as `/app/backend/data/brand-patch.sh.bak.safe.20260531013200`.
+- The safe brand patch no longer self-modifies or applies brittle chunk-specific legacy patches. It performs stable brand/link text replacement and delegates to `/app/backend/data/musk-webai-ui-patch.sh`.
 
 ## Model Optimization Layer
 
