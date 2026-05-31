@@ -155,10 +155,10 @@ style = r'''
   html.musk-webai-ui button[id^="model-selector"],
   html.musk-webai-ui [id^="model-selector"] button,
   html.musk-webai-ui [id^="model-selector"] {
-    font-size: 16px !important;
-    line-height: 1.3 !important;
-    font-weight: 620 !important;
-    color: #3f4652 !important;
+    font-size: 28px !important;
+    line-height: 36px !important;
+    font-weight: 650 !important;
+    color: #374151 !important;
   }
 
   html.musk-webai-ui .musk-hidden-top-add-model {
@@ -170,91 +170,103 @@ style = r'''
   }
 
   html.musk-webai-ui .musk-model-dropdown {
+    width: min(360px, calc(100vw - 24px)) !important;
     min-width: min(360px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    padding: 10px !important;
+    border: 1px solid rgba(229, 231, 235, 0.92) !important;
+    border-radius: 20px !important;
+    background: #ffffff !important;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14) !important;
+    overflow: hidden !important;
+  }
+
+  html.musk-webai-ui .musk-model-dropdown .musk-model-native-hidden {
+    display: none !important;
   }
 
   html.musk-webai-ui .musk-model-dropdown-empty,
   html.musk-webai-ui .musk-model-dropdown-footer-title {
-    padding: 8px 12px !important;
+    padding: 12px 14px !important;
     color: var(--musk-text-soft) !important;
-    font-size: 12px !important;
+    font-size: 13px !important;
     line-height: 1.35 !important;
-    font-weight: 520 !important;
+    font-weight: 540 !important;
   }
 
   html.musk-webai-ui .musk-model-dropdown-footer {
-    margin-top: 6px !important;
-    padding: 7px !important;
-    border-top: 1px solid rgba(230, 233, 238, 0.95) !important;
+    margin-top: 8px !important;
+    padding: 8px 0 0 !important;
+    border-top: 1px solid #e5e7eb !important;
   }
 
   html.musk-webai-ui .musk-model-dropdown-footer-row {
     width: 100% !important;
-    min-height: 34px !important;
+    min-height: 56px !important;
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
-    padding: 7px 9px !important;
+    padding: 0 14px !important;
     border: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 14px !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #303846 !important;
-    font-size: 13.5px !important;
+    color: #111827 !important;
+    font-size: 16px !important;
     line-height: 1.3 !important;
-    font-weight: 560 !important;
+    font-weight: 600 !important;
     text-align: left !important;
   }
 
   html.musk-webai-ui .musk-model-dropdown-footer-row:hover {
-    background: rgba(20, 24, 32, 0.055) !important;
+    background: #f6f6f4 !important;
   }
 
   html.musk-webai-ui .musk-model-api-list {
-    margin: 4px 7px 2px !important;
-    padding: 4px 0 6px !important;
-    border-top: 1px solid rgba(232, 235, 241, 0.9) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-top: 0 !important;
   }
 
   html.musk-webai-ui .musk-model-api-list-title {
-    padding: 7px 6px 5px !important;
-    color: var(--musk-text-soft) !important;
-    font-size: 12px !important;
-    line-height: 1.3 !important;
-    font-weight: 560 !important;
+    display: none !important;
   }
 
   html.musk-webai-ui .musk-model-api-row {
     width: 100% !important;
-    min-height: 38px !important;
+    height: 52px !important;
+    min-height: 52px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 10px !important;
-    padding: 8px 8px !important;
+    gap: 12px !important;
+    padding: 0 14px !important;
     border: 0 !important;
-    border-radius: 9px !important;
+    border-radius: 14px !important;
     background: transparent !important;
-    color: #303846 !important;
+    color: #111827 !important;
     box-shadow: none !important;
     text-align: left !important;
     cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: 520 !important;
   }
 
   html.musk-webai-ui .musk-model-api-row:hover {
-    background: rgba(20, 24, 32, 0.055) !important;
+    background: #f6f6f4 !important;
   }
 
   html.musk-webai-ui .musk-model-api-row.is-selected {
-    background: rgba(47, 128, 237, 0.08) !important;
-    color: #1f5fbf !important;
+    background: #eeeeec !important;
+    color: #111827 !important;
   }
 
   html.musk-webai-ui .musk-model-api-row-main {
     min-width: 0 !important;
     display: flex !important;
-    flex-direction: column !important;
-    gap: 2px !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex: 1 1 auto !important;
   }
 
   html.musk-webai-ui .musk-model-api-row-name,
@@ -265,22 +277,30 @@ style = r'''
   }
 
   html.musk-webai-ui .musk-model-api-row-name {
-    font-size: 13.5px !important;
+    font-size: 16px !important;
     line-height: 1.3 !important;
-    font-weight: 590 !important;
+    font-weight: 520 !important;
   }
 
   html.musk-webai-ui .musk-model-api-row-id {
-    color: var(--musk-text-soft) !important;
-    font-size: 11.5px !important;
-    line-height: 1.2 !important;
-    font-weight: 500 !important;
+    display: none !important;
+  }
+
+  html.musk-webai-ui .musk-model-recommend-badge {
+    flex: 0 0 auto !important;
+    padding: 2px 7px !important;
+    border-radius: 999px !important;
+    background: #eef2ff !important;
+    color: #4f46e5 !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
   }
 
   html.musk-webai-ui .musk-model-api-check {
     flex: 0 0 auto !important;
-    color: var(--musk-accent) !important;
-    font-size: 13px !important;
+    color: #111827 !important;
+    font-size: 15px !important;
     font-weight: 700 !important;
   }
 
@@ -773,13 +793,14 @@ style = r'''
     html.musk-webai-ui button[id^="model-selector"],
     html.musk-webai-ui [id^="model-selector"] button,
     html.musk-webai-ui [id^="model-selector"] {
-      max-width: calc(100vw - 142px) !important;
+      max-width: 160px !important;
       min-width: 0 !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
       font-size: 14.5px !important;
       line-height: 1.25 !important;
+      font-weight: 620 !important;
     }
 
     html.musk-webai-ui button[id^="model-selector"] > div,
@@ -791,23 +812,19 @@ style = r'''
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
-      font-size: 0 !important;
+      font-size: inherit !important;
     }
 
     html.musk-webai-ui button[id^="model-selector"] svg,
     html.musk-webai-ui [id^="model-selector"] button svg,
     html.musk-webai-ui [id^="model-selector"] svg {
-      display: none !important;
+      display: inline-block !important;
     }
 
     html.musk-webai-ui button[id^="model-selector"] > div::before,
     html.musk-webai-ui [id^="model-selector"] button > div::before,
     html.musk-webai-ui [id^="model-selector"] > div::before {
-      content: "模型";
-      font-size: 14.5px !important;
-      line-height: 1.25 !important;
-      color: #3f4652 !important;
-      font-weight: 620 !important;
+      content: none !important;
     }
 
     html.musk-webai-ui .prose,
@@ -889,6 +906,7 @@ runtime = r'''
       modelsLoadedAt: 0,
       modelsLoading: null,
       lastNativeModelPrimeAt: 0,
+      lastModelSelectorButton: null,
       polishPending: false
     };
 
@@ -1181,6 +1199,98 @@ runtime = r'''
 
     const getModelName = (model) => String(model?.name || model?.label || getModelId(model)).trim();
 
+    const DEFAULT_MODEL_ID = 'gpt-5.5';
+    const DEFAULT_MODEL_APPLIED_KEY = 'musk:webai:default-model-applied-v2';
+    const MODEL_DISPLAY_NAMES = {
+      'gpt-5.5': 'GPT-5.5',
+      'gpt-image-2': 'GPT Image 2',
+      'claude-opus-4-8': 'Claude Opus 4.8',
+      'claude-opus-4-7': 'Claude Opus 4.7',
+      'claude-opus-4-6': 'Claude Opus 4.6',
+      'claude-opus-4-6 思考摘要适配': 'Claude Opus 4.6 思考摘要',
+      'claude-opus-4-6 thinking adapter': 'Claude Opus 4.6 思考摘要',
+      'claude-opus-4-6 summary adapter': 'Claude Opus 4.6 思考摘要'
+    };
+
+    const normalizeModelLookupKey = (value) => cleanModelLabel(value)
+      .toLowerCase()
+      .replace(/_/g, '-')
+      .replace(/\s*-\s*/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const getModelLookupText = (model) => normalizeModelLookupKey(`${getModelId(model)} ${getModelName(model)}`);
+
+    const getModelLookupCandidates = (model) => [
+      normalizeModelLookupKey(getModelId(model)),
+      normalizeModelLookupKey(getModelName(model)),
+      getModelLookupText(model)
+    ].filter(Boolean);
+
+    const formatModelName = (id) => String(id || '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\bgpt\b/gi, 'GPT')
+      .replace(/\bclaude\b/gi, 'Claude')
+      .replace(/\bopus\b/gi, 'Opus')
+      .replace(/\bimage\b/gi, 'Image')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const getClaudeOpusVersion = (model) => {
+      const text = getModelLookupText(model);
+      const match = text.match(/claude[-\s]+opus[-\s]+(\d+)(?:[-.\s]+(\d+))?/i);
+      if (!match) return null;
+      const major = Number(match[1]);
+      const minor = Number(match[2] || 0);
+      if (!Number.isFinite(major) || !Number.isFinite(minor)) return null;
+      return {
+        label: minor ? `${major}.${minor}` : `${major}`,
+        score: major + minor / 10
+      };
+    };
+
+    const isSpecialModel = (model) => /(适配|摘要|实验|adapter|summary|thinking|reasoning|experimental|beta)/i
+      .test(`${getModelId(model)} ${getModelName(model)}`);
+
+    const isRecommendedModel = (model) => getModelLookupCandidates(model).some((value) => value === DEFAULT_MODEL_ID);
+
+    const isGptImageModel = (model) => getModelLookupText(model).includes('gpt-image-2');
+
+    const getModelDisplayName = (model) => {
+      const candidates = getModelLookupCandidates(model);
+      for (const value of candidates) {
+        if (MODEL_DISPLAY_NAMES[value]) return MODEL_DISPLAY_NAMES[value];
+      }
+      if (isRecommendedModel(model)) return 'GPT-5.5';
+      if (isGptImageModel(model)) return 'GPT Image 2';
+      const claudeVersion = getClaudeOpusVersion(model);
+      if (claudeVersion) {
+        return isSpecialModel(model)
+          ? `Claude Opus ${claudeVersion.label} 思考摘要`
+          : `Claude Opus ${claudeVersion.label}`;
+      }
+      return formatModelName(getModelName(model) || getModelId(model));
+    };
+
+    const getModelSortTuple = (model, index) => {
+      const sourceIndex = typeof model.__muskOriginalIndex === 'number' ? model.__muskOriginalIndex : index;
+      if (isRecommendedModel(model)) return [0, 0, sourceIndex];
+      const claudeVersion = getClaudeOpusVersion(model);
+      if (claudeVersion && !isSpecialModel(model)) return [1, -claudeVersion.score, sourceIndex];
+      if (claudeVersion && isSpecialModel(model)) return [2, -claudeVersion.score, sourceIndex];
+      if (isGptImageModel(model)) return [3, 0, sourceIndex];
+      return [4, 0, sourceIndex];
+    };
+
+    const sortModelsForSelector = (models) => [...models].sort((a, b) => {
+      const left = getModelSortTuple(a, models.indexOf(a));
+      const right = getModelSortTuple(b, models.indexOf(b));
+      for (let i = 0; i < left.length; i += 1) {
+        if (left[i] !== right[i]) return left[i] - right[i];
+      }
+      return 0;
+    });
+
     const getModelSearchText = (model) => `${getModelId(model)} ${getModelName(model)}`.toLowerCase();
 
     const modelIsActive = (model) => {
@@ -1218,10 +1328,11 @@ runtime = r'''
       const seen = new Set();
       return raw
         .filter(modelIsActive)
-        .map((model) => ({
+        .map((model, index) => ({
           ...model,
           id: getModelId(model),
-          name: getModelName(model)
+          name: getModelName(model),
+          __muskOriginalIndex: index
         }))
         .filter((model) => {
           if (!model.id || seen.has(model.id)) return false;
@@ -1240,10 +1351,11 @@ runtime = r'''
         merged.push({
           ...model,
           id,
-          name: getModelName(model)
+          name: getModelName(model),
+          __muskOriginalIndex: merged.length
         });
       });
-      return merged;
+      return sortModelsForSelector(merged);
     };
 
     const fetchJson = async (url) => {
@@ -1329,7 +1441,10 @@ runtime = r'''
         if (button.dataset.muskModelRefreshBound === '1') return;
         button.dataset.muskModelRefreshBound = '1';
         ['pointerdown', 'focus', 'click'].forEach((type) => {
-          button.addEventListener(type, () => primeNativeModelStore(), { passive: true });
+          button.addEventListener(type, () => {
+            state.lastModelSelectorButton = button;
+            primeNativeModelStore();
+          }, { passive: true });
         });
       });
     };
@@ -1362,23 +1477,55 @@ runtime = r'''
       }
     };
 
-    const setPreferredModel = (model, forceLabel = false) => {
-      const normalized = { id: getModelId(model), name: getModelName(model), forceLabel };
+    const setPreferredModel = (model, options = false) => {
+      const forceLabel = typeof options === 'object' ? Boolean(options.forceLabel) : Boolean(options);
+      const forceRequest = typeof options === 'object' ? Boolean(options.forceRequest) : Boolean(options);
+      const normalized = { id: getModelId(model), name: getModelDisplayName(model), forceLabel, forceRequest };
       if (!normalized.id) return;
       sessionStorage.setItem(MODEL_PREFERENCE_KEY, JSON.stringify(normalized));
+    };
+
+    const applyModelLabelToButton = (button, label) => {
+      if (!(button instanceof HTMLElement) || !label) return;
+      const target = button.querySelector('div') || button;
+      if (!target || noticeText(target).includes(label)) return;
+      const svg = target.querySelector('svg');
+      target.textContent = label;
+      if (svg) target.appendChild(svg);
+      button.setAttribute('aria-label', `Selected model: ${label}`);
+    };
+
+    const ensureDefaultModel = () => {
+      if (isModelManagementPage()) return;
+      if (sessionStorage.getItem(DEFAULT_MODEL_APPLIED_KEY) === '1') return;
+      const applyDefault = () => {
+        sessionStorage.setItem(DEFAULT_MODEL_APPLIED_KEY, '1');
+        const recommended = state.modelsCache.find(isRecommendedModel);
+        if (!recommended) return;
+        setPreferredModel(recommended, true);
+        applyPreferredModelLabel();
+      };
+      if (!state.modelsCache.length) {
+        fetchAvailableModels(false).then(() => {
+          applyDefault();
+          schedulePolish();
+        });
+        return;
+      }
+
+      applyDefault();
     };
 
     const applyPreferredModelLabel = () => {
       const preferred = getPreferredModel();
       if (!preferred?.id || !preferred.forceLabel) return;
+      if (!preferred.forceRequest && state.lastModelSelectorButton) {
+        applyModelLabelToButton(state.lastModelSelectorButton, preferred.name || preferred.id);
+        return;
+      }
       getModelSelectorButtons().forEach((button) => {
-        const target = button.querySelector('div') || button;
         const label = preferred.name || preferred.id;
-        if (!target || noticeText(target).includes(label)) return;
-        const svg = target.querySelector('svg');
-        target.textContent = label;
-        if (svg) target.appendChild(svg);
-        button.setAttribute('aria-label', `Selected model: ${label}`);
+        applyModelLabelToButton(button, label);
       });
     };
 
@@ -1393,7 +1540,9 @@ runtime = r'''
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (input, init = {}) => {
         const preferred = getPreferredModel();
-        if (!preferred?.id || !isChatCompletionRequest(input)) return nativeFetch(input, init);
+        const shouldPatchRequest = preferred?.forceRequest ||
+          (preferred?.forceLabel && !Object.prototype.hasOwnProperty.call(preferred, 'forceRequest'));
+        if (!preferred?.id || !shouldPatchRequest || !isChatCompletionRequest(input)) return nativeFetch(input, init);
 
         try {
           const nextInit = { ...init };
@@ -1513,7 +1662,7 @@ runtime = r'''
     };
 
     const getDropdownModelLabels = (container) => {
-      const ignore = /(搜索模型|Search Models?|Search models?|添加模型|Add Model|管理模型|Manage Models?|模型管理|暂无其他|当前模型|可用模型|选择模型|Select model|Remove Model|设为默认|更多选项|More options?)/i;
+      const ignore = /(搜索模型|Search Models?|Search models?|添加模型|添加并行模型|Add Model|管理模型|Manage Models?|模型管理|暂无其他|当前模型|可用模型|选择模型|Select model|Remove Model|设为默认|更多选项|More options?)/i;
       const selectedModel = getSelectedModelLabel();
       const labels = [
         ...container.querySelectorAll('[role="option"], button, [data-value], [cmdk-item]')
@@ -1541,19 +1690,67 @@ runtime = r'''
         });
     };
 
+    const labelMatchesKnownModel = (label) => {
+      const value = normalizeModelLookupKey(label);
+      if (!value) return false;
+      return state.modelsCache.some((model) => {
+        const id = normalizeModelLookupKey(getModelId(model));
+        const name = normalizeModelLookupKey(getModelName(model));
+        const display = normalizeModelLookupKey(getModelDisplayName(model));
+        return value === id ||
+          value === name ||
+          value === display ||
+          value.includes(id) ||
+          value.includes(name) ||
+          value.includes(display);
+      });
+    };
+
+    const hideNativeDropdownElement = (container, el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (el.closest('.musk-model-api-list, .musk-model-dropdown-footer')) return;
+      let target = el;
+      if (el.matches('input, [cmdk-input]')) {
+        const directChild = [...container.children].find((child) => child instanceof HTMLElement && child.contains(el));
+        if (directChild instanceof HTMLElement) target = directChild;
+      }
+      target.classList.add('musk-model-native-hidden');
+    };
+
+    const compactModelDropdownChrome = (container) => {
+      if (!(container instanceof HTMLElement)) return;
+      container.querySelectorAll('input, [cmdk-input]').forEach((el) => hideNativeDropdownElement(container, el));
+      container
+        .querySelectorAll('[role="tab"], [cmdk-group-heading], [data-radix-collection-item], button, [role="option"], [data-value], [cmdk-item]')
+        .forEach((el) => {
+          if (!(el instanceof HTMLElement)) return;
+          if (el.closest('.musk-model-api-list, .musk-model-dropdown-footer')) return;
+          const label = cleanModelLabel(`${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-value') || ''}`);
+          if (
+            /^(全部|All|外部|External|当前模型|可用模型|搜索模型|Search Models?|Search models?|添加模型|Add Model|管理模型|Manage Models?|模型管理)$/i.test(label) ||
+            isExternalBuiltInModel(label) ||
+            labelMatchesKnownModel(label)
+          ) {
+            hideNativeDropdownElement(container, el);
+          }
+        });
+    };
+
     const ensureModelDropdownFooter = (container) => {
       let footer = container.querySelector('.musk-model-dropdown-footer');
       if (!footer) {
         footer = document.createElement('div');
         footer.className = 'musk-model-dropdown-footer';
         footer.innerHTML = `
-          <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="add">+ 添加模型</button>
+          <button type="button" class="musk-model-dropdown-footer-row" data-musk-model-action="add">+ 添加并行模型</button>
         `;
         container.appendChild(footer);
       } else {
         footer.querySelector('.musk-model-dropdown-footer-title')?.remove();
         footer.querySelector('[data-musk-model-action="manage"]')?.remove();
       }
+      const addButtonLabel = footer.querySelector('[data-musk-model-action="add"]');
+      if (addButtonLabel) addButtonLabel.textContent = '+ 添加并行模型';
 
       const addButton = footer.querySelector('[data-musk-model-action="add"]');
       if (addButton && addButton.dataset.muskBound !== '1') {
@@ -1593,7 +1790,7 @@ runtime = r'''
       ].filter((el) => {
         if (!(el instanceof HTMLElement)) return false;
         if (el.closest('.musk-model-dropdown-footer, .musk-model-api-list')) return false;
-        return Boolean(getVisibleRect(el));
+        return true;
       });
       return options.find((el) => {
         const value = cleanModelLabel(`${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-value') || ''}`).toLowerCase();
@@ -1609,7 +1806,8 @@ runtime = r'''
       const nativeOption = findNativeModelOption(container, model);
       if (!nativeOption) return false;
       nativeOption.click();
-      setPreferredModel(model, false);
+      setPreferredModel(model, { forceLabel: true, forceRequest: false });
+      applyModelLabelToButton(state.lastModelSelectorButton, getModelDisplayName(model));
       return true;
     };
 
@@ -1634,7 +1832,7 @@ runtime = r'''
         closeModelDropdown();
         ensureStatusBanner(
           'musk-model-select-status',
-          `已选择 ${getModelName(model)}，新对话会使用该模型。`,
+          `已选择 ${getModelDisplayName(model)}，后续对话会使用该模型。`,
           'info'
         );
         row?.removeAttribute('aria-busy');
@@ -1672,36 +1870,42 @@ runtime = r'''
         container.insertBefore(list, footer || null);
       }
 
-      const visibleModels = models.filter((model) => {
-        if (isExternalBuiltInModel(`${getModelId(model)} ${getModelName(model)}`)) return false;
-        return !dropdownHasModel(labels, model) || labels.length <= 1;
-      });
+      const visibleModels = sortModelsForSelector(models.filter((model) =>
+        !isExternalBuiltInModel(`${getModelId(model)} ${getModelName(model)}`)
+      ));
       if (!visibleModels.length) {
         list.remove();
         return;
       }
 
-      list.innerHTML = '<div class="musk-model-api-list-title">可用模型</div>';
+      list.innerHTML = '';
       visibleModels.forEach((model) => {
         const id = getModelId(model);
-        const name = getModelName(model);
+        const name = getModelDisplayName(model);
+        const rawName = getModelName(model);
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'musk-model-api-row';
+        row.setAttribute('aria-label', name);
         row.dataset.muskModelId = id;
         row.dataset.muskSearchText = getModelSearchText(model);
-        if (selectedLabel && (selectedLabel.includes(id.toLowerCase()) || selectedLabel.includes(name.toLowerCase()))) {
+        if (selectedLabel && (
+          selectedLabel.includes(id.toLowerCase()) ||
+          selectedLabel.includes(rawName.toLowerCase()) ||
+          selectedLabel.includes(name.toLowerCase())
+        )) {
           row.classList.add('is-selected');
         }
         row.innerHTML = `
           <span class="musk-model-api-row-main">
             <span class="musk-model-api-row-name"></span>
-            <span class="musk-model-api-row-id"></span>
+            <span class="musk-model-recommend-badge" hidden>推荐</span>
           </span>
           <span class="musk-model-api-check" aria-hidden="true"></span>
         `;
         row.querySelector('.musk-model-api-row-name').textContent = name;
-        row.querySelector('.musk-model-api-row-id').textContent = id === name ? '' : id;
+        const badge = row.querySelector('.musk-model-recommend-badge');
+        if (badge && isRecommendedModel(model)) badge.hidden = false;
         row.querySelector('.musk-model-api-check').textContent = row.classList.contains('is-selected') ? '✓' : '';
         row.addEventListener('click', (event) => {
           event.preventDefault();
@@ -1725,22 +1929,20 @@ runtime = r'''
       dropdown.classList.add('musk-model-dropdown');
       primeNativeModelStore();
       hideExternalBuiltInModelOptions(dropdown);
+      compactModelDropdownChrome(dropdown);
       const labels = getDropdownModelLabels(dropdown);
       renderApiModelsInDropdown(dropdown, labels);
-      const selectedModel = getSelectedModelLabel();
-      const isSelectedModelRow = (label) => selectedModel &&
-        (label === selectedModel || label.includes(selectedModel) || selectedModel.includes(label));
       const hasLoadedModels = state.modelsLoadedAt > 0;
-      const hasApiOtherModel = hasLoadedModels && state.modelsCache.length > 1;
-      const hasOtherModel = hasApiOtherModel ||
-        labels.some((label) => selectedModel ? !isSelectedModelRow(label) : true);
+      const visibleModelCount = state.modelsCache.filter((model) =>
+        !isExternalBuiltInModel(`${getModelId(model)} ${getModelName(model)}`)
+      ).length;
       let empty = dropdown.querySelector('.musk-model-dropdown-empty');
 
-      if (hasLoadedModels && !hasOtherModel) {
+      if (hasLoadedModels && visibleModelCount === 0) {
         if (!empty) {
           empty = document.createElement('div');
           empty.className = 'musk-model-dropdown-empty';
-          empty.textContent = '暂无其他可切换模型';
+          empty.textContent = '暂无可用模型';
           const existingFooter = dropdown.querySelector('.musk-model-dropdown-footer');
           dropdown.insertBefore(empty, existingFooter || null);
         }
@@ -1749,6 +1951,7 @@ runtime = r'''
       }
 
       ensureModelDropdownFooter(dropdown);
+      compactModelDropdownChrome(dropdown);
     };
 
     const ensureStatusBanner = (id, text, kind = 'info') => {
@@ -2179,6 +2382,7 @@ runtime = r'''
       hideNativeSearch();
       bindModelSelectorRefresh();
       bindNativeModelSelectionTracking();
+      ensureDefaultModel();
       hideTopAddModelButton();
       enhanceModelDropdown();
       applyPreferredModelLabel();
