@@ -1852,6 +1852,26 @@ runtime = r'''
       });
     };
 
+    const updateRenderedModelRowsSelection = (list) => {
+      const selectedLabel = getSelectedModelLabel().toLowerCase();
+      list.querySelectorAll('.musk-model-api-row').forEach((row) => {
+        if (!(row instanceof HTMLElement)) return;
+        const model = state.modelsCache.find((item) => getModelId(item) === row.dataset.muskModelId);
+        if (!model) return;
+        const id = getModelId(model);
+        const rawName = getModelName(model);
+        const displayName = getModelDisplayName(model);
+        const selected = selectedLabel && (
+          selectedLabel.includes(id.toLowerCase()) ||
+          selectedLabel.includes(rawName.toLowerCase()) ||
+          selectedLabel.includes(displayName.toLowerCase())
+        );
+        row.classList.toggle('is-selected', Boolean(selected));
+        const check = row.querySelector('.musk-model-api-check');
+        if (check) check.textContent = selected ? '✓' : '';
+      });
+    };
+
     const renderApiModelsInDropdown = (container, labels) => {
       let list = container.querySelector('.musk-model-api-list');
       const hasLoaded = state.modelsLoadedAt > 0;
@@ -1878,6 +1898,13 @@ runtime = r'''
         return;
       }
 
+      const renderKey = visibleModels.map((model) => getModelId(model)).join('|');
+      if (list.dataset.muskRenderKey === renderKey) {
+        updateRenderedModelRowsSelection(list);
+        bindDropdownSearchFiltering(container);
+        return;
+      }
+      list.dataset.muskRenderKey = renderKey;
       list.innerHTML = '';
       visibleModels.forEach((model) => {
         const id = getModelId(model);
