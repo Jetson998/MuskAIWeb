@@ -1561,10 +1561,16 @@ runtime = r'''
         addButton.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          closeModelDropdown();
+          const nativeAdd = findTopAddModelButton();
           window.setTimeout(() => {
-            window.location.assign('/workspace/models');
+            if (nativeAdd) {
+              nativeAdd.click();
+              schedulePolish();
+            } else {
+              ensureStatusBanner('musk-model-add-status', '当前页面没有可用的添加模型入口。', 'error');
+            }
           }, 80);
+          closeModelDropdown();
         });
       }
     };
@@ -2085,6 +2091,13 @@ runtime = r'''
 
     const ensureHomeStaticTitle = () => {
       const selectedModel = getSelectedModelLabel();
+      const canHideModelHeading = (el) => {
+        if (!(el instanceof HTMLElement) || !selectedModel) return false;
+        if (el.querySelector('form, #chat-input, #message-input-container, .musk-composer, .musk-home-suggestions')) return false;
+        const text = noticeText(el);
+        if (!text || text.length > selectedModel.length + 24) return false;
+        return text === selectedModel || text.includes(selectedModel) || selectedModel.includes(text);
+      };
       const helpText = [...document.querySelectorAll('p, div, span')]
         .find((el) => {
           if (!(el instanceof HTMLElement)) return false;
@@ -2114,8 +2127,10 @@ runtime = r'''
           while (
             modelBlock.parentElement &&
             modelBlock.parentElement !== document.body &&
+            !modelBlock.parentElement.querySelector('form, #chat-input, #message-input-container, .musk-composer') &&
             !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
-            noticeText(modelBlock.parentElement).includes(selectedModel)
+            noticeText(modelBlock.parentElement).includes(selectedModel) &&
+            noticeText(modelBlock.parentElement).length <= selectedModel.length + 48
           ) {
             modelBlock = modelBlock.parentElement;
           }
@@ -2133,16 +2148,13 @@ runtime = r'''
         container.insertBefore(title, insertBefore);
       }
 
-      if (modelBlock instanceof HTMLElement) {
+      if (canHideModelHeading(modelBlock)) {
         modelBlock.classList.add('musk-home-model-heading-hidden');
       }
 
       [...container.children].forEach((child) => {
         if (!(child instanceof HTMLElement) || child === title || child === helpText) return;
-        const text = noticeText(child);
-        const isModelHeading = selectedModel &&
-          (text === selectedModel || text.includes(selectedModel) || selectedModel.includes(text));
-        child.classList.toggle('musk-home-model-heading-hidden', Boolean(isModelHeading));
+        child.classList.toggle('musk-home-model-heading-hidden', canHideModelHeading(child));
       });
     };
 
