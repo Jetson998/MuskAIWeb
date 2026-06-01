@@ -41,6 +41,11 @@ style = r'''
     --musk-radius-lg: 18px;
     --musk-shadow-soft: 0 8px 22px rgba(20, 24, 32, 0.048);
     --musk-composer-height: 132px;
+    --chat-gutter: clamp(20px, 4vw, 56px);
+    --chat-stage-max: clamp(900px, 72vw, 1120px);
+    --text-readable-max: 76ch;
+    --user-bubble-max: 760px;
+    --composer-max: clamp(760px, 62vw, 920px);
     --musk-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
       "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
     --musk-font-mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -74,7 +79,7 @@ style = r'''
   html.musk-webai-ui #sidebar a,
   html.musk-webai-ui #sidebar button {
     border-radius: var(--musk-radius-sm) !important;
-    font-size: 14.5px !important;
+    font-size: 14px !important;
     line-height: 1.35 !important;
   }
 
@@ -124,6 +129,46 @@ style = r'''
     transform: translateY(-50%);
   }
 
+  html.musk-webai-ui .musk-sidebar-restore-button {
+    position: fixed !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 80 !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(213, 218, 227, 0.92) !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: #303846 !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+    cursor: pointer !important;
+  }
+
+  html.musk-webai-ui.musk-sidebar-collapsed .musk-sidebar-restore-button {
+    display: flex !important;
+  }
+
+  html.musk-webai-ui .musk-sidebar-restore-button:hover {
+    background: #f6f7f9 !important;
+    border-color: rgba(188, 196, 208, 0.95) !important;
+    color: #111827 !important;
+  }
+
+  html.musk-webai-ui .musk-sidebar-restore-button svg {
+    width: 19px !important;
+    height: 19px !important;
+    stroke-width: 2.2 !important;
+  }
+
+  html.musk-webai-ui.musk-sidebar-collapsed .musk-native-sidebar-toggle {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
   html.musk-webai-ui #sidebar-new-chat-button,
   html.musk-webai-ui #new-chat-button {
     background: var(--musk-surface-raised) !important;
@@ -155,9 +200,9 @@ style = r'''
   html.musk-webai-ui button[id^="model-selector"],
   html.musk-webai-ui [id^="model-selector"] button,
   html.musk-webai-ui [id^="model-selector"] {
-    font-size: 15px !important;
-    line-height: 20px !important;
-    font-weight: 600 !important;
+    font-size: 16px !important;
+    line-height: 22px !important;
+    font-weight: 620 !important;
     color: #374151 !important;
   }
 
@@ -352,16 +397,31 @@ style = r'''
   }
 
   html.musk-webai-ui .message-listitem {
-    max-width: 980px !important;
+    width: min(calc(100% - var(--chat-gutter) * 2), var(--chat-stage-max)) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+    padding-inline: 0 !important;
   }
 
   html.musk-webai-ui .prose,
   html.musk-webai-ui [class*="prose"] {
-    max-width: 900px !important;
+    max-width: 100% !important;
     color: #172033 !important;
-    font-size: 16px !important;
-    line-height: 1.76 !important;
+    font-size: 15.5px !important;
+    line-height: 1.68 !important;
     letter-spacing: 0 !important;
+  }
+
+  html.musk-webai-ui #response-content-container,
+  html.musk-webai-ui .markdown-prose,
+  html.musk-webai-ui [class*="prose"] {
+    width: 100% !important;
+  }
+
+  html.musk-webai-ui #response-content-container > :where(p, ul, ol, blockquote, h1, h2, h3, h4),
+  html.musk-webai-ui .prose > :where(p, ul, ol, blockquote, h1, h2, h3, h4),
+  html.musk-webai-ui [class*="prose"] > :where(p, ul, ol, blockquote, h1, h2, h3, h4) {
+    max-width: min(var(--text-readable-max), 100%) !important;
   }
 
   html.musk-webai-ui .prose > :first-child,
@@ -376,30 +436,30 @@ style = r'''
 
   html.musk-webai-ui .prose h1,
   html.musk-webai-ui [class*="prose"] h1 {
-    font-size: 32px !important;
-    line-height: 1.18 !important;
-    margin: 0.65em 0 0.38em !important;
-    font-weight: 760 !important;
+    font-size: 26px !important;
+    line-height: 1.24 !important;
+    margin: 0.55em 0 0.34em !important;
+    font-weight: 720 !important;
     letter-spacing: 0 !important;
     color: #0f172a !important;
   }
 
   html.musk-webai-ui .prose h2,
   html.musk-webai-ui [class*="prose"] h2 {
-    font-size: 25px !important;
-    line-height: 1.28 !important;
-    margin: 1.05em 0 0.42em !important;
-    font-weight: 720 !important;
+    font-size: 21px !important;
+    line-height: 1.32 !important;
+    margin: 0.95em 0 0.38em !important;
+    font-weight: 690 !important;
     letter-spacing: 0 !important;
     color: #111827 !important;
   }
 
   html.musk-webai-ui .prose h3,
   html.musk-webai-ui [class*="prose"] h3 {
-    font-size: 20px !important;
-    line-height: 1.38 !important;
+    font-size: 18px !important;
+    line-height: 1.42 !important;
     margin: 1em 0 0.36em !important;
-    font-weight: 690 !important;
+    font-weight: 670 !important;
     letter-spacing: 0 !important;
     color: #162033 !important;
   }
@@ -439,6 +499,8 @@ style = r'''
 
   html.musk-webai-ui .prose table,
   html.musk-webai-ui [class*="prose"] table {
+    width: 100% !important;
+    max-width: 100% !important;
     font-size: 14.5px !important;
     line-height: 1.55 !important;
     border-collapse: separate !important;
@@ -451,6 +513,7 @@ style = r'''
   html.musk-webai-ui .markdown-prose .overflow-x-auto,
   html.musk-webai-ui [class*="prose"] .overflow-x-auto,
   html.musk-webai-ui .musk-table-shell {
+    width: 100% !important;
     max-width: 100% !important;
     overflow-x: auto !important;
     border-radius: var(--musk-radius-sm) !important;
@@ -511,6 +574,9 @@ style = r'''
   }
 
   html.musk-webai-ui pre {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
     background: #f3f3f1 !important;
     border: 1px solid var(--musk-border) !important;
     border-radius: var(--musk-radius-md) !important;
@@ -521,6 +587,8 @@ style = r'''
   }
 
   html.musk-webai-ui .musk-code-block-shell {
+    width: 100% !important;
+    max-width: 100% !important;
     overflow: hidden !important;
     border-radius: 14px !important;
     border-color: rgba(226, 229, 235, 0.95) !important;
@@ -610,28 +678,42 @@ style = r'''
   }
 
   html.musk-webai-ui .musk-user-message,
+  html.musk-webai-ui .musk-user-message-content,
   html.musk-webai-ui [class*="message"] [class*="bg-blue"],
   html.musk-webai-ui [class*="chat"] [class*="bg-blue"] {
+    max-width: min(70%, var(--user-bubble-max)) !important;
     background: var(--musk-accent-soft) !important;
     color: #182033 !important;
-    border-radius: var(--musk-radius-lg) !important;
-    font-size: 15.5px !important;
-    line-height: 1.55 !important;
+    border-radius: 16px !important;
+    font-size: 15px !important;
+    line-height: 1.52 !important;
+    padding: 10px 14px !important;
+  }
+
+  html.musk-webai-ui .musk-user-message-row,
+  html.musk-webai-ui .message-listitem:has(.musk-user-message),
+  html.musk-webai-ui .message-listitem:has(.musk-user-message-content) {
+    width: min(calc(100% - var(--chat-gutter) * 2), var(--chat-stage-max)) !important;
+    margin-inline: auto !important;
+    display: flex !important;
+    justify-content: flex-end !important;
   }
 
   html.musk-webai-ui #chat-input {
-    font-size: 16px !important;
+    font-size: 15px !important;
     line-height: 1.55 !important;
     color: var(--musk-text) !important;
   }
 
   html.musk-webai-ui #chat-input::placeholder {
     color: #a0a5ad !important;
+    font-size: 14px !important;
   }
 
   html.musk-webai-ui .musk-composer,
   html.musk-webai-ui form:has(#chat-input) {
-    max-width: 820px !important;
+    width: min(calc(100% - var(--chat-gutter) * 2), var(--composer-max)) !important;
+    max-width: var(--composer-max) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     border-radius: var(--musk-radius-lg) !important;
@@ -642,6 +724,7 @@ style = r'''
   }
 
   html.musk-webai-ui #message-input-container {
+    width: 100% !important;
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
@@ -815,6 +898,10 @@ style = r'''
   }
 
   @media (max-width: 768px) {
+    :root {
+      --chat-gutter: 14px;
+    }
+
     html.musk-webai-ui body {
       font-size: 14.5px;
     }
@@ -859,30 +946,48 @@ style = r'''
     html.musk-webai-ui .prose,
     html.musk-webai-ui [class*="prose"] {
       max-width: 100% !important;
-      font-size: 15.5px !important;
-      line-height: 1.72 !important;
+      font-size: 15px !important;
+      line-height: 1.58 !important;
       padding-left: 2px !important;
       padding-right: 2px !important;
     }
 
+    html.musk-webai-ui .message-listitem,
+    html.musk-webai-ui .musk-user-message-row,
+    html.musk-webai-ui .message-listitem:has(.musk-user-message),
+    html.musk-webai-ui .message-listitem:has(.musk-user-message-content) {
+      width: calc(100% - 28px) !important;
+    }
+
+    html.musk-webai-ui .musk-user-message,
+    html.musk-webai-ui .musk-user-message-content,
+    html.musk-webai-ui [class*="message"] [class*="bg-blue"],
+    html.musk-webai-ui [class*="chat"] [class*="bg-blue"] {
+      max-width: 80% !important;
+      font-size: 14.5px !important;
+      line-height: 1.5 !important;
+      padding: 9px 12px !important;
+    }
+
     html.musk-webai-ui .prose h1,
     html.musk-webai-ui [class*="prose"] h1 {
-      font-size: 28px !important;
-      line-height: 1.2 !important;
+      font-size: 23px !important;
+      line-height: 1.24 !important;
     }
 
     html.musk-webai-ui .prose h2,
     html.musk-webai-ui [class*="prose"] h2 {
-      font-size: 22px !important;
+      font-size: 19px !important;
     }
 
     html.musk-webai-ui .prose h3,
     html.musk-webai-ui [class*="prose"] h3 {
-      font-size: 18px !important;
+      font-size: 17px !important;
     }
 
     html.musk-webai-ui .musk-composer,
     html.musk-webai-ui form:has(#chat-input) {
+      width: calc(100% - 20px) !important;
       max-width: calc(100vw - 20px) !important;
       border-radius: 16px !important;
     }
@@ -1007,7 +1112,10 @@ runtime = r'''
         .querySelectorAll('[class*="bg-blue"], [class*="bg-[#E"], [class*="bg-sky"]')
         .forEach((el) => {
           const text = (el.textContent || '').trim();
-          if (text && text.length < 2400) el.classList.add('musk-user-message');
+          if (!text || text.length >= 2400) return;
+          el.classList.add('musk-user-message', 'musk-user-message-content');
+          const row = el.closest('.message-listitem, [data-message-id], .group, [class*="message"]');
+          if (row instanceof HTMLElement) row.classList.add('musk-user-message-row');
         });
     };
 
@@ -1024,6 +1132,100 @@ runtime = r'''
           }
           el.classList.toggle('musk-active-sidebar-link', active);
         });
+    };
+
+    const getSidebar = () => document.getElementById('sidebar') ||
+      [...document.querySelectorAll('aside[aria-label], nav[aria-label]')]
+        .find((el) => /sidebar|侧边栏|侧栏/i.test(el.getAttribute('aria-label') || '')) ||
+      null;
+
+    const isSidebarVisible = () => {
+      const sidebar = getSidebar();
+      if (!(sidebar instanceof HTMLElement)) return false;
+      const style = getComputedStyle(sidebar);
+      const rect = sidebar.getBoundingClientRect();
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+      return rect.width >= 120 && rect.height >= 120 && rect.right > 48 && rect.left < window.innerWidth - 80;
+    };
+
+    const isAppShellVisible = () => Boolean(
+      document.querySelector('#chat-input, #messages-container, #sidebar, main, [role="main"]')
+    ) && !document.querySelector('form input[type="password"]');
+
+    const findSidebarToggleButton = () => {
+      const labelPattern = /(展开侧边栏|展开侧栏|打开侧边栏|打开侧栏|Open Sidebar|Show Sidebar|Toggle Sidebar|Menu|菜单)/i;
+      const buttons = [...document.querySelectorAll('button, [role="button"]')]
+        .filter((button) => button instanceof HTMLElement && !button.classList.contains('musk-sidebar-restore-button'));
+
+      const visibleMatches = buttons.filter((button) => {
+        const label = noticeText(button);
+        if (!labelPattern.test(label)) return false;
+        const rect = getVisibleRect(button);
+        return Boolean(rect && rect.top <= 96 && rect.left <= 120);
+      });
+      if (visibleMatches.length) return visibleMatches[0];
+
+      return buttons.find((button) => {
+        const label = noticeText(button);
+        if (!labelPattern.test(label)) return false;
+        if (button.closest('#sidebar') && !isSidebarVisible()) return false;
+        return true;
+      }) || null;
+    };
+
+    const restoreSidebarWithoutNativeButton = () => {
+      const sidebar = getSidebar();
+      if (!(sidebar instanceof HTMLElement)) return false;
+      sidebar.classList.remove('hidden', '-translate-x-full', 'translate-x-[-100%]', 'w-0');
+      sidebar.style.removeProperty('display');
+      sidebar.style.removeProperty('visibility');
+      sidebar.style.removeProperty('opacity');
+      sidebar.style.removeProperty('transform');
+      sidebar.style.removeProperty('width');
+      return true;
+    };
+
+    const ensureSidebarRestoreButton = () => {
+      const shouldShow = isAppShellVisible() && !isSidebarVisible();
+      document.documentElement.classList.toggle('musk-sidebar-collapsed', shouldShow);
+
+      document.querySelectorAll('.musk-native-sidebar-toggle').forEach((el) => {
+        el.classList.remove('musk-native-sidebar-toggle');
+      });
+      const nativeToggle = findSidebarToggleButton();
+      if (nativeToggle && !isSidebarVisible()) nativeToggle.classList.add('musk-native-sidebar-toggle');
+
+      let button = document.querySelector('.musk-sidebar-restore-button');
+      if (!button && document.body) {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'musk-sidebar-restore-button';
+        button.setAttribute('aria-label', '展开侧边栏');
+        button.setAttribute('title', '展开侧边栏');
+        button.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+            <path d="M9 4v16"></path>
+            <path d="m14 9 3 3-3 3"></path>
+          </svg>
+        `;
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const nativeToggle = findSidebarToggleButton();
+          if (nativeToggle) {
+            nativeToggle.click();
+          } else if (!restoreSidebarWithoutNativeButton()) {
+            ensureStatusBanner('musk-sidebar-status', '未找到可用的侧边栏展开入口，请刷新页面重试。', 'error');
+          }
+          window.setTimeout(ensureSidebarRestoreButton, 180);
+        });
+        document.body.appendChild(button);
+      }
+
+      if (button instanceof HTMLElement) {
+        button.hidden = !shouldShow;
+      }
     };
 
     const markTableShells = () => {
@@ -2482,6 +2684,7 @@ runtime = r'''
       markThinking();
       markUserMessages();
       markActiveSidebarLink();
+      ensureSidebarRestoreButton();
       markTableShells();
       markCodeBlocks();
       ensureAssistantShareButtons();
