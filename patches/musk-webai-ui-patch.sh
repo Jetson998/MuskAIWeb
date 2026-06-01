@@ -1305,7 +1305,7 @@ runtime = r'''
           cache: 'no-store'
         });
         if (!response.ok) throw new Error(`share ${response.status}`);
-        const payload = await response.json();
+        const payload = await readJsonResponse(response, null);
         const shareId = payload?.share_id || payload?.id || payload?.data?.share_id;
         if (!shareId) throw new Error('missing share id');
         const url = `${window.location.origin}/s/${shareId}`;
@@ -1464,6 +1464,17 @@ runtime = r'''
     const getAuthHeaders = () => {
       const token = localStorage.getItem('token') || localStorage.token || '';
       return token ? { authorization: `Bearer ${token}` } : {};
+    };
+
+    const readJsonResponse = async (response, fallback = null) => {
+      const text = await response.text();
+      if (!String(text || '').trim()) return fallback;
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        const detail = `接口返回了无效 JSON (${response.status})`;
+        throw Object.assign(new Error(detail), { detail });
+      }
     };
 
     const getModelId = (model) => String(model?.id || model?.model || model?.value || model?.name || '').trim();
@@ -1636,7 +1647,7 @@ runtime = r'''
         cache: 'no-store'
       });
       if (!response.ok) throw new Error(`${url} ${response.status}`);
-      return response.json();
+      return readJsonResponse(response, null);
     };
 
     const fetchManagementModels = async () => {
@@ -2820,6 +2831,60 @@ def inject(html: str) -> str:
         html = f'{html}\n{runtime}'
     return html
 
+
+def patch_openai_json_parsing(build_dir: Path) -> None:
+    chunks_dir = build_dir / '_app' / 'immutable' / 'chunks'
+    if not chunks_dir.exists():
+        return
+
+    helper = (
+        'const muskSafeJsonResponse=async r=>{'
+        'const t=await r.text();'
+        'if(!String(t||"").trim())return null;'
+        'try{return JSON.parse(t)}'
+        'catch(e){throw{detail:`接口返回了无效 JSON (${r.status})`}}'
+        '};'
+    )
+    helper_definition_marker = 'const muskSafeJsonResponse='
+    json_block = re.compile(
+        r'if\(!(?P<res>[A-Za-z_$][\w$]*)\.ok\)throw await (?P=res)\.json\(\);'
+        r'return (?P=res)\.json\(\)'
+    )
+
+    def replace_json_block(match: re.Match[str]) -> str:
+        res = match.group('res')
+        return (
+            f'const muskPayload=await muskSafeJsonResponse({res});'
+            f'if(!{res}.ok)throw muskPayload??{{detail:"HTTP "+{res}.status}};'
+            'if(muskPayload===null)throw{detail:"服务端返回空响应，请重试或切换模型。"};'
+            'return muskPayload'
+        )
+
+    for js_path in chunks_dir.glob('*.js'):
+        text = js_path.read_text(errors='ignore')
+        if '/chat/completions' not in text:
+            continue
+
+        if '.json()' in text:
+            updated, replacements = json_block.subn(replace_json_block, text)
+        else:
+            updated, replacements = text, 0
+        needs_helper = (
+            'muskSafeJsonResponse(' in updated
+            and helper_definition_marker not in updated
+        )
+        if not replacements and not needs_helper:
+            continue
+
+        if needs_helper:
+            updated = re.sub(r'^(import[^;]+;)', r'\1' + helper, updated, count=1)
+
+        if updated != text:
+            js_path.write_text(updated)
+            print(f'patched JSON parsing in {js_path} ({replacements} replacements)')
+
+
+patch_openai_json_parsing(build)
 
 for html_path in html_paths:
     if not html_path.exists():
