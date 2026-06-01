@@ -166,6 +166,7 @@ style = r'''
 
   html.musk-webai-ui.musk-sidebar-collapsed .musk-native-sidebar-toggle {
     visibility: hidden !important;
+    opacity: 0 !important;
     pointer-events: none !important;
   }
 
@@ -831,6 +832,14 @@ style = r'''
     display: none !important;
   }
 
+  html.musk-webai-ui.musk-home-empty .musk-home-static-title + .w-full.text-3xl .flex.flex-row.justify-center.w-fit.max-w-xl {
+    display: none !important;
+  }
+
+  html.musk-webai-ui.musk-home-empty .musk-home-static-title + .w-full.text-3xl .flex.mt-1.mb-2 {
+    display: none !important;
+  }
+
   html.musk-webai-ui.musk-home-empty .musk-home-suggestions {
     width: min(600px, calc(100vw - 40px)) !important;
     max-height: none !important;
@@ -1156,6 +1165,14 @@ runtime = r'''
       const labelPattern = /(展开侧边栏|展开侧栏|打开侧边栏|打开侧栏|Open Sidebar|Show Sidebar|Toggle Sidebar|Menu|菜单)/i;
       const buttons = [...document.querySelectorAll('button, [role="button"]')]
         .filter((button) => button instanceof HTMLElement && !button.classList.contains('musk-sidebar-restore-button'));
+
+      const resizeRailMatches = buttons.filter((button) => {
+        const rect = getVisibleRect(button);
+        if (!rect || rect.top > 32 || rect.left > 72 || rect.width > 64 || rect.height < 80) return false;
+        const cursor = getComputedStyle(button).cursor || '';
+        return /e-resize|ew-resize|col-resize/i.test(cursor) || /cursor-\[(?:e|ew|col)-resize\]/i.test(button.className || '');
+      });
+      if (resizeRailMatches.length && !isSidebarVisible()) return resizeRailMatches[0];
 
       const visibleMatches = buttons.filter((button) => {
         const label = noticeText(button);
@@ -2586,12 +2603,57 @@ runtime = r'''
 
     const ensureHomeStaticTitle = () => {
       const selectedModel = getSelectedModelLabel();
+      const getHomeModelHeadingLabels = () => {
+        const labels = new Set();
+        if (selectedModel) labels.add(selectedModel);
+        state.modelsCache.forEach((model) => {
+          [getModelId(model), getModelName(model), getModelDisplayName(model)].forEach((label) => {
+            if (label) labels.add(label);
+          });
+        });
+        Object.keys(modelDisplayNames).forEach((label) => labels.add(label));
+        Object.values(modelDisplayNames).forEach((label) => labels.add(label));
+        return [...labels]
+          .map((label) => String(label || '').trim())
+          .filter(Boolean);
+      };
+      const isModelHeadingText = (text) => {
+        const clean = String(text || '').trim().replace(/\s+/g, ' ');
+        if (!clean || clean.length > 96) return false;
+        if (/今天要完成什么工作|有什么我能帮您的吗|How can I help/i.test(clean)) return false;
+        const normalized = normalizeModelLookupKey(clean);
+        if (/^gpt\s*-?\s*(?:5\.5|image\s*2)$/i.test(clean)) return true;
+        if (/claude[-\s]*opus[-\s]*(?:4[-.\s]*(?:8|7|6)|4\.8|4\.7|4\.6)/i.test(clean)) return true;
+        return getHomeModelHeadingLabels().some((label) => {
+          const target = normalizeModelLookupKey(label);
+          return normalized === target || normalized.includes(target) || target.includes(normalized);
+        });
+      };
       const canHideModelHeading = (el) => {
-        if (!(el instanceof HTMLElement) || !selectedModel) return false;
+        if (!(el instanceof HTMLElement)) return false;
         if (el.querySelector('form, #chat-input, #message-input-container, .musk-composer, .musk-home-suggestions')) return false;
         const text = noticeText(el);
-        if (!text || text.length > selectedModel.length + 24) return false;
+        if (!text) return false;
+        if (isModelHeadingText(text)) return true;
+        if (!selectedModel || text.length > selectedModel.length + 24) return false;
         return text === selectedModel || text.includes(selectedModel) || selectedModel.includes(text);
+      };
+      const hideHomeModelHeading = (el, scope) => {
+        if (!(el instanceof HTMLElement) || !(scope instanceof HTMLElement) || el === scope) return;
+        const text = noticeText(el);
+        if (!isModelHeadingText(text)) return;
+        let block = el;
+        while (
+          block.parentElement &&
+          block.parentElement !== scope &&
+          !block.parentElement.querySelector('form, #chat-input, #message-input-container, .musk-composer') &&
+          !/建议|Suggestions/i.test(noticeText(block.parentElement)) &&
+          noticeText(block.parentElement).includes(text) &&
+          noticeText(block.parentElement).length <= text.length + 48
+        ) {
+          block = block.parentElement;
+        }
+        if (block !== scope) block.classList.add('musk-home-model-heading-hidden');
       };
       const helpText = [...document.querySelectorAll('p, div, span')]
         .find((el) => {
@@ -2607,25 +2669,26 @@ runtime = r'''
       let insertBefore = helpText || null;
       let modelBlock = null;
 
-      if (!container && selectedModel) {
+      if (!container) {
         const modelNode = [...document.querySelectorAll('div, span, h1, h2')]
           .find((el) => {
             if (!(el instanceof HTMLElement)) return false;
             if (el.closest('nav, #sidebar, form, button, .musk-model-dropdown, [role="listbox"], [role="menu"], [role="dialog"]')) return false;
-            if (noticeText(el) !== selectedModel) return false;
+            if (!isModelHeadingText(noticeText(el))) return false;
             const rect = getVisibleRect(el);
             return Boolean(rect && rect.top > 80 && rect.width > 120);
           });
 
         if (modelNode) {
           modelBlock = modelNode;
+          const modelHeadingText = noticeText(modelNode);
           while (
             modelBlock.parentElement &&
             modelBlock.parentElement !== document.body &&
             !modelBlock.parentElement.querySelector('form, #chat-input, #message-input-container, .musk-composer') &&
             !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
-            noticeText(modelBlock.parentElement).includes(selectedModel) &&
-            noticeText(modelBlock.parentElement).length <= selectedModel.length + 48
+            noticeText(modelBlock.parentElement).includes(modelHeadingText) &&
+            noticeText(modelBlock.parentElement).length <= modelHeadingText.length + 48
           ) {
             modelBlock = modelBlock.parentElement;
           }
@@ -2643,13 +2706,16 @@ runtime = r'''
         container.insertBefore(title, insertBefore);
       }
 
-      if (canHideModelHeading(modelBlock)) {
-        modelBlock.classList.add('musk-home-model-heading-hidden');
-      }
+      hideHomeModelHeading(modelBlock, container);
 
       [...container.children].forEach((child) => {
         if (!(child instanceof HTMLElement) || child === title || child === helpText) return;
         child.classList.toggle('musk-home-model-heading-hidden', canHideModelHeading(child));
+      });
+      [...container.querySelectorAll('div, span, h1, h2')].forEach((el) => {
+        if (!(el instanceof HTMLElement) || el === title || title.contains(el) || el.contains(title)) return;
+        if (el.closest('form, #chat-input, #message-input-container, .musk-composer, .musk-home-suggestions')) return;
+        hideHomeModelHeading(el, container);
       });
     };
 
