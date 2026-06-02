@@ -1051,7 +1051,8 @@ runtime = r'''
     const CONNECTION_DRAFT_TTL_MS = 10 * 60 * 1000;
     const MODEL_CACHE_TTL_MS = 45 * 1000;
     const MODEL_PREFERENCE_KEY = 'musk:webai:selected-model';
-    const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v1';
+    const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v2';
+    const LEGACY_IMAGE_GENERATION_OPT_IN_KEYS = ['musk:webai:image-generation-opt-in-v1'];
     const state = {
       path: window.location.pathname,
       routeStartedAt: Date.now(),
@@ -1071,6 +1072,7 @@ runtime = r'''
       lastModelSelectorButton: null,
       modelSelectorOpeningTimer: null,
       suppressImageGenerationOptInTracking: false,
+      imageGenerationOptInPendingUntil: 0,
       polishPending: false
     };
 
@@ -1140,6 +1142,10 @@ runtime = r'''
     const isImageGenerationControl = (el) =>
       /(图片生成|图像生成|生成图像|Image Generation|Generate Image|Generate images)/i.test(getImageGenerationLabel(el));
 
+    const clearLegacyImageGenerationOptIn = () => {
+      LEGACY_IMAGE_GENERATION_OPT_IN_KEYS.forEach((key) => localStorage.removeItem(key));
+    };
+
     const findImageGenerationControl = (target) => {
       if (!(target instanceof HTMLElement)) return null;
       let node = target;
@@ -1158,6 +1164,11 @@ runtime = r'''
       const checked = el.matches('[aria-checked="true"], [data-state="checked"]') ||
         Boolean(el.querySelector('[aria-checked="true"], [data-state="checked"], input[type="checkbox"]:checked'));
       if (checked) return true;
+      if (el.matches('[aria-pressed="true"], [aria-selected="true"], [data-selected="true"], [data-active="true"]') ||
+        Boolean(el.querySelector('[aria-pressed="true"], [aria-selected="true"], [data-selected="true"], [data-active="true"]'))) {
+        return true;
+      }
+      if (el.closest('[role="menu"], [role="listbox"], [role="dialog"], [data-radix-popper-content-wrapper]')) return false;
       const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
         .map((child) => child instanceof HTMLElement ? child.className || '' : '')
         .join(' ')}`;
@@ -1165,15 +1176,36 @@ runtime = r'''
         !/\b(bg-(?:gray|slate|zinc|neutral)-|opacity-50|disabled)\b/i.test(classText);
     };
 
+    const isActiveImageGenerationChip = (el) => {
+      if (!(el instanceof HTMLElement) || !isImageGenerationControl(el)) return false;
+      if (!el.closest('form, #message-input-container, .musk-composer')) return false;
+      if (el.closest('[role="menu"], [role="listbox"], [role="dialog"], [data-radix-popper-content-wrapper]')) return false;
+      const rect = getVisibleRect(el);
+      if (!rect || rect.width < 36 || rect.height > 56) return false;
+      const label = getImageGenerationLabel(el);
+      if (isToggleOn(el)) return true;
+      const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
+        .map((child) => child instanceof HTMLElement ? child.className || '' : '')
+        .join(' ')}`;
+      return /[×✕x]\s*$/i.test(label) ||
+        /\b(bg-(?:sky|blue|cyan)-|text-(?:sky|blue|cyan)-|ring-(?:sky|blue|cyan)-)/i.test(classText);
+    };
+
+    const hasActiveImageGenerationChip = () => [...document.querySelectorAll('button, [role="button"], [aria-label], [title]')]
+      .some((el) => el instanceof HTMLElement && isActiveImageGenerationChip(el));
+
     const markImageGenerationDefaultOff = () => {
+      clearLegacyImageGenerationOptIn();
       document.documentElement.classList.toggle('musk-image-generation-opted-in', hasImageGenerationOptIn());
       if (hasImageGenerationOptIn()) return;
+      if (Date.now() < state.imageGenerationOptInPendingUntil) return;
 
-      [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"]')]
+      [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"], [aria-label], [title]')]
         .filter((el) => el instanceof HTMLElement && isImageGenerationControl(el))
         .forEach((el) => {
           const rect = getVisibleRect(el);
-          if (!rect || !isToggleOn(el)) return;
+          if (!rect) return;
+          if (!isToggleOn(el) && !isActiveImageGenerationChip(el)) return;
           const clickTarget = el.querySelector('[role="switch"], input[type="checkbox"], button') || el;
           if (!(clickTarget instanceof HTMLElement)) return;
           state.suppressImageGenerationOptInTracking = true;
@@ -1191,8 +1223,17 @@ runtime = r'''
         if (state.suppressImageGenerationOptInTracking) return;
         const control = findImageGenerationControl(event.target);
         if (!control) return;
-        localStorage.setItem(IMAGE_GENERATION_OPT_IN_KEY, '1');
-        document.documentElement.classList.add('musk-image-generation-opted-in');
+        state.imageGenerationOptInPendingUntil = Date.now() + 700;
+        window.setTimeout(() => {
+          if (isToggleOn(control) || hasActiveImageGenerationChip()) {
+            localStorage.setItem(IMAGE_GENERATION_OPT_IN_KEY, '1');
+            document.documentElement.classList.add('musk-image-generation-opted-in');
+          } else {
+            localStorage.removeItem(IMAGE_GENERATION_OPT_IN_KEY);
+            document.documentElement.classList.remove('musk-image-generation-opted-in');
+          }
+          state.imageGenerationOptInPendingUntil = 0;
+        }, 80);
       }, true);
     };
 
