@@ -1051,6 +1051,7 @@ runtime = r'''
     const CONNECTION_DRAFT_TTL_MS = 10 * 60 * 1000;
     const MODEL_CACHE_TTL_MS = 45 * 1000;
     const MODEL_PREFERENCE_KEY = 'musk:webai:selected-model';
+    const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v1';
     const state = {
       path: window.location.pathname,
       routeStartedAt: Date.now(),
@@ -1069,6 +1070,7 @@ runtime = r'''
       lastNativeModelPrimeAt: 0,
       lastModelSelectorButton: null,
       modelSelectorOpeningTimer: null,
+      suppressImageGenerationOptInTracking: false,
       polishPending: false
     };
 
@@ -1123,6 +1125,77 @@ runtime = r'''
       }
     };
 
+    const getImageGenerationLabel = (el) => {
+      if (!(el instanceof HTMLElement)) return '';
+      const parts = [
+        el.textContent,
+        el.getAttribute('aria-label'),
+        el.getAttribute('title'),
+        el.closest('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"]')?.textContent,
+        el.parentElement?.textContent
+      ];
+      return parts.filter(Boolean).join(' ').trim().replace(/\s+/g, ' ');
+    };
+
+    const isImageGenerationControl = (el) =>
+      /(图片生成|图像生成|生成图像|Image Generation|Generate Image|Generate images)/i.test(getImageGenerationLabel(el));
+
+    const findImageGenerationControl = (target) => {
+      if (!(target instanceof HTMLElement)) return null;
+      let node = target;
+      while (node && node instanceof HTMLElement && node !== document.body) {
+        if (node.closest('.musk-model-dropdown, [id^="model-selector"], #sidebar')) return null;
+        if (isImageGenerationControl(node)) {
+          return node.closest('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"]') || node;
+        }
+        node = node.parentElement;
+      }
+      return null;
+    };
+
+    const isToggleOn = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const checked = el.matches('[aria-checked="true"], [data-state="checked"]') ||
+        Boolean(el.querySelector('[aria-checked="true"], [data-state="checked"], input[type="checkbox"]:checked'));
+      if (checked) return true;
+      const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
+        .map((child) => child instanceof HTMLElement ? child.className || '' : '')
+        .join(' ')}`;
+      return /\b(bg-(?:green|emerald|sky|blue|cyan)-|text-(?:green|emerald|sky|blue|cyan)-)/i.test(classText) &&
+        !/\b(bg-(?:gray|slate|zinc|neutral)-|opacity-50|disabled)\b/i.test(classText);
+    };
+
+    const markImageGenerationDefaultOff = () => {
+      document.documentElement.classList.toggle('musk-image-generation-opted-in', hasImageGenerationOptIn());
+      if (hasImageGenerationOptIn()) return;
+
+      [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"]')]
+        .filter((el) => el instanceof HTMLElement && isImageGenerationControl(el))
+        .forEach((el) => {
+          const rect = getVisibleRect(el);
+          if (!rect || !isToggleOn(el)) return;
+          const clickTarget = el.querySelector('[role="switch"], input[type="checkbox"], button') || el;
+          if (!(clickTarget instanceof HTMLElement)) return;
+          state.suppressImageGenerationOptInTracking = true;
+          clickTarget.click();
+          window.setTimeout(() => {
+            state.suppressImageGenerationOptInTracking = false;
+          }, 120);
+        });
+    };
+
+    const bindImageGenerationOptInTracking = () => {
+      if (window.__muskImageGenerationOptInTrackingBound) return;
+      window.__muskImageGenerationOptInTrackingBound = true;
+      document.addEventListener('click', (event) => {
+        if (state.suppressImageGenerationOptInTracking) return;
+        const control = findImageGenerationControl(event.target);
+        if (!control) return;
+        localStorage.setItem(IMAGE_GENERATION_OPT_IN_KEY, '1');
+        document.documentElement.classList.add('musk-image-generation-opted-in');
+      }, true);
+    };
+
     const guardComposerVisibility = () => {
       const input = document.getElementById('chat-input');
       if (!(input instanceof HTMLElement)) return;
@@ -1151,10 +1224,10 @@ runtime = r'''
     const repairMissingHomeComposer = () => {
       if (window.location.pathname !== '/') return;
       if (document.getElementById('chat-input')) return;
-      if (!document.querySelector('.musk-home-static-title')) return;
+      if (Date.now() - state.routeStartedAt < 3500) return;
       const bodyText = noticeText(document.body);
       if (/登录|Login|Sign in|注册|Register/i.test(bodyText)) return;
-      if (/加载|Loading/i.test(bodyText) && !/今天要完成什么工作/i.test(bodyText)) return;
+      if (/加载|Loading|Connecting|初始化/i.test(bodyText) && !/今天要完成什么工作/i.test(bodyText)) return;
       const key = 'musk:webai:home-composer-reload';
       const last = Number(sessionStorage.getItem(key) || 0);
       if (Date.now() - last < 30000) return;
@@ -1946,6 +2019,39 @@ runtime = r'''
       return /\/api\/(chat\/completions|v1\/chat\/completions|v1\/chats\/completion|chat\/completion)/i.test(url);
     };
 
+    const hasImageGenerationOptIn = () => localStorage.getItem(IMAGE_GENERATION_OPT_IN_KEY) === '1';
+
+    const stripDefaultImageGeneration = (payload) => {
+      if (!payload || typeof payload !== 'object' || hasImageGenerationOptIn()) return payload;
+
+      if (payload.image_generation === true) payload.image_generation = false;
+      if (payload.imageGeneration === true) payload.imageGeneration = false;
+      if (payload.generate_image === true) payload.generate_image = false;
+      if (payload.generateImage === true) payload.generateImage = false;
+
+      ['features', 'options', 'params', 'metadata', 'meta'].forEach((key) => {
+        const value = payload[key];
+        if (!value || typeof value !== 'object') return;
+        if (value.image_generation === true) value.image_generation = false;
+        if (value.imageGeneration === true) value.imageGeneration = false;
+        if (Array.isArray(value.featureIds)) {
+          value.featureIds = value.featureIds.filter((id) => id !== 'image_generation');
+        }
+        if (value.features && typeof value.features === 'object') {
+          if (value.features.image_generation === true) value.features.image_generation = false;
+          if (value.features.imageGeneration === true) value.features.imageGeneration = false;
+        }
+      });
+
+      ['featureIds', 'enabled_features', 'enabledFeatures', 'tool_ids', 'toolIds'].forEach((key) => {
+        if (Array.isArray(payload[key])) {
+          payload[key] = payload[key].filter((id) => id !== 'image_generation');
+        }
+      });
+
+      return payload;
+    };
+
     const installPreferredModelFetchPatch = () => {
       if (window.__muskPreferredModelFetchPatched) return;
       window.__muskPreferredModelFetchPatched = true;
@@ -1954,7 +2060,7 @@ runtime = r'''
         const preferred = getPreferredModel();
         const shouldPatchRequest = preferred?.forceRequest ||
           (preferred?.forceLabel && !Object.prototype.hasOwnProperty.call(preferred, 'forceRequest'));
-        if (!preferred?.id || !shouldPatchRequest || !isChatCompletionRequest(input)) return nativeFetch(input, init);
+        if (!isChatCompletionRequest(input)) return nativeFetch(input, init);
 
         try {
           const nextInit = { ...init };
@@ -1962,14 +2068,17 @@ runtime = r'''
           if (typeof body === 'string' && body.trim().startsWith('{')) {
             const payload = JSON.parse(body);
             if (payload && typeof payload === 'object') {
-              payload.model = preferred.id;
-              if (Array.isArray(payload.models)) payload.models = [preferred.id];
+              if (preferred?.id && shouldPatchRequest) {
+                payload.model = preferred.id;
+                if (Array.isArray(payload.models)) payload.models = [preferred.id];
+              }
+              stripDefaultImageGeneration(payload);
               nextInit.body = JSON.stringify(payload);
               return nativeFetch(input, nextInit);
             }
           }
         } catch (error) {
-          console.warn('[Musk WebAI] preferred model patch skipped', error);
+          console.warn('[Musk WebAI] chat request patch skipped', error);
         }
 
         return nativeFetch(input, init);
@@ -2910,7 +3019,10 @@ runtime = r'''
       }
 
       const input = document.getElementById('chat-input');
-      if (!input) return;
+      if (!input) {
+        window.setTimeout(repairMissingHomeComposer, 1400);
+        return;
+      }
 
       ensureHomeStaticTitle();
       markHomeSuggestions();
@@ -2933,6 +3045,8 @@ runtime = r'''
       markComposer();
       markThinking();
       markUserMessages();
+      bindImageGenerationOptInTracking();
+      markImageGenerationDefaultOff();
       markActiveSidebarLink();
       ensureSidebarRestoreButton();
       markTableShells();
