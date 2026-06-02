@@ -1154,8 +1154,24 @@ runtime = r'''
       return parts.filter(Boolean).join(' ').trim().replace(/\s+/g, ' ');
     };
 
+    const getSvgPathText = (el) => {
+      if (!(el instanceof HTMLElement)) return '';
+      return [...el.querySelectorAll('path')]
+        .map((path) => path.getAttribute('d') || '')
+        .filter(Boolean)
+        .join(' ');
+    };
+
+    const isImageGenerationIcon = (el) => {
+      const pathText = getSvgPathText(el);
+      return pathText.includes('M21 7.6V20.4') ||
+        pathText.includes('M7 16.8L12.4444 15L21 18') ||
+        pathText.includes('M16.5 13C15.6716 13');
+    };
+
     const isImageGenerationControl = (el) =>
-      /(图片生成|图像生成|生成图像|Image Generation|Generate Image|Generate images)/i.test(getImageGenerationLabel(el));
+      /(图片生成|图像生成|生成图像|Image Generation|Generate Image|Generate images)/i.test(getImageGenerationLabel(el)) ||
+      isImageGenerationIcon(el);
 
     const isImageGenerationRemoveLabel = (label) =>
       /(移除|删除|关闭|取消|清除|Remove|Close|Delete|Clear|Dismiss|×|✕)/i.test(label || '');
@@ -1206,7 +1222,7 @@ runtime = r'''
       return nodes.some((node) => {
         const classText = getElementClassText(node);
         return node.matches(':disabled, [disabled], [aria-disabled="true"], [data-disabled="true"], [data-state="disabled"]') ||
-          /\b(disabled|pointer-events-none|cursor-not-allowed|opacity-(?:40|50|60|70))\b/i.test(classText);
+          /\b(disabled|cursor-not-allowed|opacity-(?:40|50|60|70))\b/i.test(classText);
       });
     };
 
@@ -1221,8 +1237,34 @@ runtime = r'''
     };
 
     const isImageGenerationFeatureDisabled = () =>
-      [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [aria-label], [title], [data-testid], [class*="cursor-pointer"]')]
+      [...document.querySelectorAll('button, [role="button"], [role="switch"], [role="menuitem"], [role="option"], label, [aria-label], [title], [data-testid], [data-disabled], [class*="cursor-pointer"]')]
         .some((el) => el instanceof HTMLElement && isImageGenerationFeatureControl(el) && isControlDisabled(el));
+
+    const getImageGenerationSwitch = (el) => {
+      if (!(el instanceof HTMLElement)) return null;
+      const controls = [...el.querySelectorAll('[role="switch"], button'), el]
+        .filter((node) => node instanceof HTMLElement);
+      return controls.find((node) =>
+        node.getAttribute('role') === 'switch' ||
+        node.hasAttribute('data-state') ||
+        /\b(bg-(?:emerald|green|gray|slate|zinc|neutral)-)/i.test(String(node.className || ''))
+      ) || null;
+    };
+
+    const isImageGenerationFeatureOff = () =>
+      [...document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"], label, [aria-label], [title], [data-testid], [class*="cursor-pointer"]')]
+        .some((el) => {
+          if (!(el instanceof HTMLElement) || !isImageGenerationFeatureControl(el)) return false;
+          const switchEl = getImageGenerationSwitch(el);
+          if (!switchEl) return false;
+          const stateValue = switchEl.getAttribute('data-state') ||
+            switchEl.querySelector('[data-state]')?.getAttribute('data-state') || '';
+          if (/unchecked|off|false/i.test(stateValue)) return true;
+          if (/checked|on|true/i.test(stateValue)) return false;
+          const classText = getElementClassText(switchEl);
+          return /\b(bg-(?:gray|slate|zinc|neutral)-)/i.test(classText) &&
+            !/\b(bg-(?:emerald|green|sky|blue|cyan)-)/i.test(classText);
+        });
 
     const isToggleOn = (el) => {
       if (!(el instanceof HTMLElement)) return false;
@@ -1309,6 +1351,9 @@ runtime = r'''
       } else {
         document.documentElement.classList.remove('musk-image-generation-disabled');
       }
+      if (isImageGenerationFeatureOff()) {
+        clearImageGenerationOptIn();
+      }
       document.documentElement.classList.toggle('musk-image-generation-opted-in', hasImageGenerationOptIn());
       if (hasImageGenerationOptIn()) {
         markImageGenerationChips();
@@ -1354,6 +1399,13 @@ runtime = r'''
             return;
           }
           document.documentElement.classList.remove('musk-image-generation-disabled');
+          if (isImageGenerationFeatureOff()) {
+            clearImageGenerationOptIn();
+            document.documentElement.classList.remove('musk-image-generation-opted-in');
+            markImageGenerationChips();
+            state.imageGenerationOptInPendingUntil = 0;
+            return;
+          }
           if (isToggleOn(control) || hasActiveImageGenerationChip()) {
             setImageGenerationOptIn();
             document.documentElement.classList.add('musk-image-generation-opted-in');
