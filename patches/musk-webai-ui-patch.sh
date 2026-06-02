@@ -2780,6 +2780,16 @@ runtime = r'''
           block.classList.add('musk-home-model-heading-hidden');
         }
       };
+      const isHomeModelHeadingCandidate = (el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        if (el.closest('nav, #sidebar, form, button, .musk-model-dropdown, [role="listbox"], [role="menu"], [role="dialog"]')) return false;
+        if (isComposerProtectedNode(el) || el.querySelector('.musk-home-suggestions')) return false;
+        const text = noticeText(el);
+        if (!isModelHeadingText(text)) return false;
+        const rect = getVisibleRect(el);
+        if (!rect || rect.top <= 80 || rect.width <= 120) return false;
+        return true;
+      };
       const helpText = [...document.querySelectorAll('p, div, span')]
         .find((el) => {
           if (!(el instanceof HTMLElement)) return false;
@@ -2807,9 +2817,12 @@ runtime = r'''
                 child.contains(anchor) &&
                 !isComposerProtectedNode(child)
               );
+              if (node === anchor) continue;
               return {
                 container: node,
-                insertBefore: insertBefore instanceof HTMLElement ? insertBefore : anchor
+                insertBefore: insertBefore instanceof HTMLElement && insertBefore.parentElement === node
+                  ? insertBefore
+                  : null
               };
             }
           }
@@ -2829,13 +2842,16 @@ runtime = r'''
 
       if (!container) {
         const modelNode = [...document.querySelectorAll('div, span, h1, h2')]
-          .find((el) => {
-            if (!(el instanceof HTMLElement)) return false;
-            if (el.closest('nav, #sidebar, form, button, .musk-model-dropdown, [role="listbox"], [role="menu"], [role="dialog"]')) return false;
-            if (!isModelHeadingText(noticeText(el))) return false;
-            const rect = getVisibleRect(el);
-            return Boolean(rect && rect.top > 80 && rect.width > 120);
-          });
+          .filter(isHomeModelHeadingCandidate)
+          .sort((a, b) => {
+            const aText = noticeText(a);
+            const bText = noticeText(b);
+            const aRect = getVisibleRect(a);
+            const bRect = getVisibleRect(b);
+            const aArea = (aRect?.width || 0) * (aRect?.height || 0);
+            const bArea = (bRect?.width || 0) * (bRect?.height || 0);
+            return aText.length - bText.length || aArea - bArea;
+          })[0];
 
         if (modelNode) {
           modelBlock = modelNode;
@@ -2867,7 +2883,7 @@ runtime = r'''
         title = document.createElement('div');
         title.className = 'musk-home-static-title';
         title.textContent = '今天要完成什么工作？';
-        container.insertBefore(title, insertBefore);
+        container.insertBefore(title, insertBefore?.parentElement === container ? insertBefore : null);
       }
 
       hideHomeModelHeading(modelBlock, container);
