@@ -2732,8 +2732,8 @@ runtime = r'''
             if (label) labels.add(label);
           });
         });
-        Object.keys(modelDisplayNames).forEach((label) => labels.add(label));
-        Object.values(modelDisplayNames).forEach((label) => labels.add(label));
+        Object.keys(MODEL_DISPLAY_NAMES).forEach((label) => labels.add(label));
+        Object.values(MODEL_DISPLAY_NAMES).forEach((label) => labels.add(label));
         return [...labels]
           .map((label) => String(label || '').trim())
           .filter(Boolean);
