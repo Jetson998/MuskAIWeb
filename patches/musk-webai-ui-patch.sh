@@ -832,12 +832,26 @@ style = r'''
     display: none !important;
   }
 
-  html.musk-webai-ui.musk-home-empty .musk-home-static-title + .w-full.text-3xl .flex.flex-row.justify-center.w-fit.max-w-xl {
-    display: none !important;
+  html.musk-webai-ui.musk-home-empty .musk-home-model-heading-hidden:has(#chat-input),
+  html.musk-webai-ui.musk-home-empty .musk-home-model-heading-hidden:has(#message-input-container),
+  html.musk-webai-ui.musk-home-empty .musk-home-model-heading-hidden:has(form) {
+    display: revert !important;
   }
 
-  html.musk-webai-ui.musk-home-empty .musk-home-static-title + .w-full.text-3xl .flex.mt-1.mb-2 {
-    display: none !important;
+  html.musk-webai-ui.musk-home-empty form:has(#chat-input),
+  html.musk-webai-ui.musk-home-empty #message-input-container,
+  html.musk-webai-ui.musk-home-empty #chat-input {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  html.musk-webai-ui.musk-home-empty form:has(#chat-input),
+  html.musk-webai-ui.musk-home-empty #message-input-container {
+    display: flex !important;
+  }
+
+  html.musk-webai-ui.musk-home-empty #chat-input {
+    display: block !important;
   }
 
   html.musk-webai-ui.musk-home-empty .musk-home-suggestions {
@@ -1048,6 +1062,8 @@ runtime = r'''
       modelsCache: [],
       modelsLoadedAt: 0,
       modelsLoading: null,
+      userModelsCache: [],
+      userModelsLoadedAt: 0,
       lastNativeModelPrimeAt: 0,
       lastModelSelectorButton: null,
       modelSelectorOpeningTimer: null,
@@ -1057,6 +1073,8 @@ runtime = r'''
     const removeById = (root, ids) => {
       ids.forEach((id) => root.querySelectorAll(`#${id}`).forEach((el) => el.remove()));
     };
+
+    const COMPOSER_PROTECTED_SELECTOR = 'form, #chat-input, #message-input-container, .musk-composer';
 
     const replaceText = () => {
       const target = document.body || document.documentElement;
@@ -1101,6 +1119,47 @@ runtime = r'''
           `${Math.ceil(Math.min(Math.max(height, 96), 220))}px`
         );
       }
+    };
+
+    const guardComposerVisibility = () => {
+      const input = document.getElementById('chat-input');
+      if (!(input instanceof HTMLElement)) return;
+      const protectedNodes = new Set();
+      document
+        .querySelectorAll(COMPOSER_PROTECTED_SELECTOR)
+        .forEach((node) => {
+          if (node instanceof HTMLElement) protectedNodes.add(node);
+        });
+      let node = input;
+      while (node && node instanceof HTMLElement && node !== document.documentElement) {
+        protectedNodes.add(node);
+        node = node.parentElement;
+      }
+      protectedNodes.forEach((node) => {
+        if (node instanceof HTMLElement) node.classList.remove('musk-home-model-heading-hidden');
+      });
+    };
+
+    const isComposerProtectedNode = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      return el.matches(COMPOSER_PROTECTED_SELECTOR) ||
+        Boolean(el.querySelector(COMPOSER_PROTECTED_SELECTOR));
+    };
+
+    const repairMissingHomeComposer = () => {
+      if (window.location.pathname !== '/') return;
+      if (document.getElementById('chat-input')) return;
+      if (!document.querySelector('.musk-home-static-title')) return;
+      const bodyText = noticeText(document.body);
+      if (/登录|Login|Sign in|注册|Register/i.test(bodyText)) return;
+      if (/加载|Loading/i.test(bodyText) && !/今天要完成什么工作/i.test(bodyText)) return;
+      const key = 'musk:webai:home-composer-reload';
+      const last = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - last < 30000) return;
+      sessionStorage.setItem(key, String(Date.now()));
+      const url = new URL(window.location.href);
+      url.searchParams.set('musk-composer-repair', String(Date.now()));
+      window.location.replace(url.toString());
     };
 
     const markThinking = () => {
@@ -1675,13 +1734,23 @@ runtime = r'''
       if (state.modelsLoading) return state.modelsLoading;
 
       state.modelsLoading = Promise.allSettled([
-        fetchJson('/api/models?refresh=true').then(normalizeModelsResponse),
+        fetchJson('/api/models?refresh=true').then((payload) =>
+          normalizeModelsResponse(payload).map((model) => ({ ...model, source: 'user-available' }))
+        ),
         fetchManagementModels()
       ])
         .then((results) => {
           results
             .filter((result) => result.status === 'rejected')
             .forEach((result) => console.warn('[Musk WebAI] model source failed', result.reason));
+          if (results[0]?.status === 'fulfilled') {
+            state.userModelsCache = results[0].value;
+            state.userModelsLoadedAt = Date.now();
+          } else if (!state.userModelsLoadedAt) {
+            state.userModelsCache = [];
+            state.userModelsLoadedAt = Date.now();
+          }
+
           const groups = results
             .filter((result) => result.status === 'fulfilled')
             .map((result) => result.value);
@@ -1701,6 +1770,22 @@ runtime = r'''
 
       return state.modelsLoading;
     };
+
+    const isModelIdUserAvailable = (id) => {
+      const target = normalizeModelLookupKey(id);
+      if (!target) return false;
+      return state.userModelsCache.some((model) =>
+        getModelLookupCandidates(model).some((value) => value === target)
+      );
+    };
+
+    const isUserAvailableModel = (model) => isModelIdUserAvailable(getModelId(model));
+
+    const getSelectableModels = () => (
+      state.userModelsLoadedAt > 0
+        ? state.userModelsCache
+        : state.modelsCache.filter(isUserAvailableModel)
+    );
 
     const primeNativeModelStore = () => {
       const now = Date.now();
@@ -1772,6 +1857,19 @@ runtime = r'''
       }
     };
 
+    const clearPreferredModel = () => {
+      sessionStorage.removeItem(MODEL_PREFERENCE_KEY);
+    };
+
+    const sanitizePreferredModel = () => {
+      if (!state.userModelsLoadedAt) return false;
+      const preferred = getPreferredModel();
+      if (!preferred?.id || isModelIdUserAvailable(preferred.id)) return false;
+      clearPreferredModel();
+      sessionStorage.removeItem(DEFAULT_MODEL_APPLIED_KEY);
+      return true;
+    };
+
     const setPreferredModel = (model, options = false) => {
       const forceLabel = typeof options === 'object' ? Boolean(options.forceLabel) : Boolean(options);
       const forceRequest = typeof options === 'object' ? Boolean(options.forceRequest) : Boolean(options);
@@ -1792,21 +1890,28 @@ runtime = r'''
 
     const ensureDefaultModel = () => {
       if (isModelManagementPage()) return;
-      if (sessionStorage.getItem(DEFAULT_MODEL_APPLIED_KEY) === '1') return;
-      const applyDefault = () => {
-        sessionStorage.setItem(DEFAULT_MODEL_APPLIED_KEY, '1');
-        const recommended = state.modelsCache.find(isRecommendedModel);
-        if (!recommended) return;
-        setPreferredModel(recommended, true);
-        applyPreferredModelLabel();
-      };
-      if (!state.modelsCache.length) {
+      if (!state.userModelsLoadedAt) {
         fetchAvailableModels(false).then(() => {
-          applyDefault();
+          ensureDefaultModel();
           schedulePolish();
         });
         return;
       }
+      sanitizePreferredModel();
+      if (sessionStorage.getItem(DEFAULT_MODEL_APPLIED_KEY) === '1') return;
+      const applyDefault = () => {
+        sessionStorage.setItem(DEFAULT_MODEL_APPLIED_KEY, '1');
+        const userModels = getSelectableModels();
+        const recommended = userModels.find(isRecommendedModel) ||
+          userModels.find((model) => !isGptImageModel(model)) ||
+          userModels[0];
+        if (!recommended) {
+          sessionStorage.removeItem(DEFAULT_MODEL_APPLIED_KEY);
+          return;
+        }
+        setPreferredModel(recommended, { forceLabel: true, forceRequest: true });
+        applyPreferredModelLabel();
+      };
 
       applyDefault();
     };
@@ -2124,6 +2229,11 @@ runtime = r'''
 
     const selectApiModel = (model, row) => {
       row?.setAttribute('aria-busy', 'true');
+      if (state.userModelsLoadedAt && !isUserAvailableModel(model)) {
+        row?.removeAttribute('aria-busy');
+        ensureStatusBanner('musk-model-select-status', '当前账户不可用该模型，请联系管理员开启权限。', 'error');
+        return;
+      }
       setPreferredModel(model, { forceLabel: true, forceRequest: true });
       applyPreferredModelLabel();
       document.querySelectorAll('.musk-model-api-row').forEach((item) => {
@@ -2158,7 +2268,7 @@ runtime = r'''
       const selectedLabel = getSelectedModelLabel().toLowerCase();
       list.querySelectorAll('.musk-model-api-row').forEach((row) => {
         if (!(row instanceof HTMLElement)) return;
-        const model = state.modelsCache.find((item) => getModelId(item) === row.dataset.muskModelId);
+        const model = getSelectableModels().find((item) => getModelId(item) === row.dataset.muskModelId);
         if (!model) return;
         const selected = modelMatchesCurrentSelection(model, selectedLabel);
         row.classList.toggle('is-selected', Boolean(selected));
@@ -2170,7 +2280,7 @@ runtime = r'''
     const renderApiModelsInDropdown = (container, labels) => {
       let list = container.querySelector('.musk-model-api-list');
       const hasLoaded = state.modelsLoadedAt > 0;
-      const models = state.modelsCache;
+      const models = getSelectableModels();
       const selectedLabel = getSelectedModelLabel().toLowerCase();
 
       if (!hasLoaded && !models.length) {
@@ -2250,7 +2360,7 @@ runtime = r'''
       const labels = getDropdownModelLabels(dropdown);
       renderApiModelsInDropdown(dropdown, labels);
       const hasLoadedModels = state.modelsLoadedAt > 0;
-      const visibleModelCount = state.modelsCache.filter((model) =>
+      const visibleModelCount = getSelectableModels().filter((model) =>
         !isExternalBuiltInModel(`${getModelId(model)} ${getModelName(model)}`)
       ).length;
       let empty = dropdown.querySelector('.musk-model-dropdown-empty');
@@ -2642,7 +2752,7 @@ runtime = r'''
       };
       const canHideModelHeading = (el) => {
         if (!(el instanceof HTMLElement)) return false;
-        if (el.querySelector('form, #chat-input, #message-input-container, .musk-composer, .musk-home-suggestions')) return false;
+        if (isComposerProtectedNode(el) || el.querySelector('.musk-home-suggestions')) return false;
         const text = noticeText(el);
         if (!text) return false;
         if (isModelHeadingText(text)) return true;
@@ -2657,14 +2767,16 @@ runtime = r'''
         while (
           block.parentElement &&
           block.parentElement !== scope &&
-          !block.parentElement.querySelector('form, #chat-input, #message-input-container, .musk-composer') &&
+          !isComposerProtectedNode(block.parentElement) &&
           !/建议|Suggestions/i.test(noticeText(block.parentElement)) &&
           noticeText(block.parentElement).includes(text) &&
           noticeText(block.parentElement).length <= text.length + 48
         ) {
           block = block.parentElement;
         }
-        if (block !== scope) block.classList.add('musk-home-model-heading-hidden');
+        if (block !== scope && !isComposerProtectedNode(block)) {
+          block.classList.add('musk-home-model-heading-hidden');
+        }
       };
       const helpText = [...document.querySelectorAll('p, div, span')]
         .find((el) => {
@@ -2696,7 +2808,7 @@ runtime = r'''
           while (
             modelBlock.parentElement &&
             modelBlock.parentElement !== document.body &&
-            !modelBlock.parentElement.querySelector('form, #chat-input, #message-input-container, .musk-composer') &&
+            !isComposerProtectedNode(modelBlock.parentElement) &&
             !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
             noticeText(modelBlock.parentElement).includes(modelHeadingText) &&
             noticeText(modelBlock.parentElement).length <= modelHeadingText.length + 48
@@ -2723,11 +2835,13 @@ runtime = r'''
         if (!(child instanceof HTMLElement) || child === title || child === helpText) return;
         child.classList.toggle('musk-home-model-heading-hidden', canHideModelHeading(child));
       });
+      guardComposerVisibility();
       [...container.querySelectorAll('div, span, h1, h2')].forEach((el) => {
         if (!(el instanceof HTMLElement) || el === title || title.contains(el) || el.contains(title)) return;
-        if (el.closest('form, #chat-input, #message-input-container, .musk-composer, .musk-home-suggestions')) return;
+        if (el.closest(`${COMPOSER_PROTECTED_SELECTOR}, .musk-home-suggestions`)) return;
         hideHomeModelHeading(el, container);
       });
+      guardComposerVisibility();
     };
 
     const markHomeEmptyState = () => {
@@ -2743,6 +2857,8 @@ runtime = r'''
 
       ensureHomeStaticTitle();
       markHomeSuggestions();
+      guardComposerVisibility();
+      window.setTimeout(repairMissingHomeComposer, 1400);
     };
 
     const polish = () => {
