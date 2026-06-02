@@ -819,6 +819,8 @@ style = r'''
   }
 
   html.musk-webai-ui.musk-home-empty .musk-home-static-title {
+    width: min(720px, calc(100vw - 40px)) !important;
+    max-width: 100% !important;
     font-size: 28px !important;
     line-height: 1.28 !important;
     font-weight: 680 !important;
@@ -2788,9 +2790,42 @@ runtime = r'''
           return Boolean(rect && rect.top > 80 && rect.width > 180);
         });
 
+      const findStableHomeTitleSlot = (anchor) => {
+        const input = document.getElementById('chat-input');
+        if (!(input instanceof HTMLElement) || !(anchor instanceof HTMLElement)) return null;
+        let node = input.parentElement;
+        while (node && node instanceof HTMLElement && node !== document.body) {
+          if (
+            !node.matches(COMPOSER_PROTECTED_SELECTOR) &&
+            node.contains(input) &&
+            node.contains(anchor)
+          ) {
+            const rect = getVisibleRect(node);
+            if (rect && rect.width >= 260) {
+              const insertBefore = [...node.children].find((child) =>
+                child instanceof HTMLElement &&
+                child.contains(anchor) &&
+                !isComposerProtectedNode(child)
+              );
+              return {
+                container: node,
+                insertBefore: insertBefore instanceof HTMLElement ? insertBefore : anchor
+              };
+            }
+          }
+          node = node.parentElement;
+        }
+        return null;
+      };
+
       let container = helpText?.parentElement || null;
       let insertBefore = helpText || null;
       let modelBlock = null;
+      const helpSlot = findStableHomeTitleSlot(helpText);
+      if (helpSlot) {
+        container = helpSlot.container;
+        insertBefore = helpSlot.insertBefore;
+      }
 
       if (!container) {
         const modelNode = [...document.querySelectorAll('div, span, h1, h2')]
@@ -2804,19 +2839,25 @@ runtime = r'''
 
         if (modelNode) {
           modelBlock = modelNode;
-          const modelHeadingText = noticeText(modelNode);
-          while (
-            modelBlock.parentElement &&
-            modelBlock.parentElement !== document.body &&
-            !isComposerProtectedNode(modelBlock.parentElement) &&
-            !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
-            noticeText(modelBlock.parentElement).includes(modelHeadingText) &&
-            noticeText(modelBlock.parentElement).length <= modelHeadingText.length + 48
-          ) {
-            modelBlock = modelBlock.parentElement;
+          const modelSlot = findStableHomeTitleSlot(modelBlock);
+          if (modelSlot) {
+            container = modelSlot.container;
+            insertBefore = modelSlot.insertBefore;
+          } else {
+            const modelHeadingText = noticeText(modelNode);
+            while (
+              modelBlock.parentElement &&
+              modelBlock.parentElement !== document.body &&
+              !isComposerProtectedNode(modelBlock.parentElement) &&
+              !/建议|Suggestions/i.test(noticeText(modelBlock.parentElement)) &&
+              noticeText(modelBlock.parentElement).includes(modelHeadingText) &&
+              noticeText(modelBlock.parentElement).length <= modelHeadingText.length + 48
+            ) {
+              modelBlock = modelBlock.parentElement;
+            }
+            container = modelBlock.parentElement;
+            insertBefore = modelBlock;
           }
-          container = modelBlock.parentElement;
-          insertBefore = modelBlock;
         }
       }
 
