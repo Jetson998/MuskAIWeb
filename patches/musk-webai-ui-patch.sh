@@ -856,6 +856,7 @@ style = r'''
     display: block !important;
   }
 
+  html.musk-webai-ui.musk-image-generation-disabled .musk-image-generation-active-chip,
   html.musk-webai-ui:not(.musk-image-generation-opted-in) .musk-image-generation-active-chip {
     display: none !important;
   }
@@ -1055,8 +1056,11 @@ runtime = r'''
     const CONNECTION_DRAFT_TTL_MS = 10 * 60 * 1000;
     const MODEL_CACHE_TTL_MS = 45 * 1000;
     const MODEL_PREFERENCE_KEY = 'musk:webai:selected-model';
-    const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v2';
-    const LEGACY_IMAGE_GENERATION_OPT_IN_KEYS = ['musk:webai:image-generation-opt-in-v1'];
+    const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v3';
+    const LEGACY_IMAGE_GENERATION_OPT_IN_KEYS = [
+      'musk:webai:image-generation-opt-in-v1',
+      'musk:webai:image-generation-opt-in-v2'
+    ];
     const state = {
       path: window.location.pathname,
       routeStartedAt: Date.now(),
@@ -1160,6 +1164,20 @@ runtime = r'''
       LEGACY_IMAGE_GENERATION_OPT_IN_KEYS.forEach((key) => localStorage.removeItem(key));
     };
 
+    const hasImageGenerationOptIn = () => sessionStorage.getItem(IMAGE_GENERATION_OPT_IN_KEY) === '1';
+
+    const setImageGenerationOptIn = () => {
+      clearLegacyImageGenerationOptIn();
+      localStorage.removeItem(IMAGE_GENERATION_OPT_IN_KEY);
+      sessionStorage.setItem(IMAGE_GENERATION_OPT_IN_KEY, '1');
+    };
+
+    const clearImageGenerationOptIn = () => {
+      clearLegacyImageGenerationOptIn();
+      localStorage.removeItem(IMAGE_GENERATION_OPT_IN_KEY);
+      sessionStorage.removeItem(IMAGE_GENERATION_OPT_IN_KEY);
+    };
+
     const findImageGenerationControl = (target) => {
       if (!(target instanceof HTMLElement)) return null;
       let node = target;
@@ -1173,6 +1191,39 @@ runtime = r'''
       return null;
     };
 
+    const getElementClassText = (el) => {
+      if (!(el instanceof HTMLElement)) return '';
+      return `${el.className || ''} ${[...el.querySelectorAll('*')]
+        .map((child) => child instanceof HTMLElement ? child.className || '' : '')
+        .join(' ')}`;
+    };
+
+    const isControlDisabled = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const control = el.closest('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"], [aria-label], [title]') || el;
+      const nodes = [control, ...control.querySelectorAll('button, [role="button"], [role="switch"], input, [aria-disabled], [data-disabled], [disabled]')]
+        .filter((node) => node instanceof HTMLElement);
+      return nodes.some((node) => {
+        const classText = getElementClassText(node);
+        return node.matches(':disabled, [disabled], [aria-disabled="true"], [data-disabled="true"], [data-state="disabled"]') ||
+          /\b(disabled|pointer-events-none|cursor-not-allowed|opacity-(?:40|50|60|70))\b/i.test(classText);
+      });
+    };
+
+    const isImageGenerationFeatureControl = (el) => {
+      if (!(el instanceof HTMLElement) || !isImageGenerationControl(el)) return false;
+      if (el.closest('.musk-model-dropdown, [id^="model-selector"], #sidebar')) return false;
+      if (el.closest('form, #message-input-container, .musk-composer') &&
+        !el.closest('[role="menu"], [role="listbox"], [role="dialog"], [data-radix-popper-content-wrapper]')) {
+        return false;
+      }
+      return true;
+    };
+
+    const isImageGenerationFeatureDisabled = () =>
+      [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [aria-label], [title], [data-testid], [class*="cursor-pointer"]')]
+        .some((el) => el instanceof HTMLElement && isImageGenerationFeatureControl(el) && isControlDisabled(el));
+
     const isToggleOn = (el) => {
       if (!(el instanceof HTMLElement)) return false;
       const checked = el.matches('[aria-checked="true"], [data-state="checked"]') ||
@@ -1183,9 +1234,7 @@ runtime = r'''
         return true;
       }
       if (el.closest('[role="menu"], [role="listbox"], [role="dialog"], [data-radix-popper-content-wrapper]')) return false;
-      const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
-        .map((child) => child instanceof HTMLElement ? child.className || '' : '')
-        .join(' ')}`;
+      const classText = getElementClassText(el);
       return /\b(bg-(?:green|emerald|sky|blue|cyan)-|text-(?:green|emerald|sky|blue|cyan)-)/i.test(classText) &&
         !/\b(bg-(?:gray|slate|zinc|neutral)-|opacity-50|disabled)\b/i.test(classText);
     };
@@ -1199,9 +1248,7 @@ runtime = r'''
       const label = getImageGenerationLabel(el);
       if (isToggleOn(el)) return true;
       if (isImageGenerationRemoveLabel(label)) return true;
-      const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
-        .map((child) => child instanceof HTMLElement ? child.className || '' : '')
-        .join(' ')}`;
+      const classText = getElementClassText(el);
       return /[×✕x]\s*$/i.test(label) ||
         /\b(bg-(?:sky|blue|cyan)-|text-(?:sky|blue|cyan)-|ring-(?:sky|blue|cyan)-)/i.test(classText);
     };
@@ -1256,6 +1303,12 @@ runtime = r'''
 
     const markImageGenerationDefaultOff = () => {
       clearLegacyImageGenerationOptIn();
+      if (isImageGenerationFeatureDisabled()) {
+        clearImageGenerationOptIn();
+        document.documentElement.classList.add('musk-image-generation-disabled');
+      } else {
+        document.documentElement.classList.remove('musk-image-generation-disabled');
+      }
       document.documentElement.classList.toggle('musk-image-generation-opted-in', hasImageGenerationOptIn());
       if (hasImageGenerationOptIn()) {
         markImageGenerationChips();
@@ -1292,11 +1345,20 @@ runtime = r'''
         if (!control) return;
         state.imageGenerationOptInPendingUntil = Date.now() + 700;
         window.setTimeout(() => {
+          if (isImageGenerationFeatureDisabled()) {
+            clearImageGenerationOptIn();
+            document.documentElement.classList.add('musk-image-generation-disabled');
+            document.documentElement.classList.remove('musk-image-generation-opted-in');
+            markImageGenerationChips();
+            state.imageGenerationOptInPendingUntil = 0;
+            return;
+          }
+          document.documentElement.classList.remove('musk-image-generation-disabled');
           if (isToggleOn(control) || hasActiveImageGenerationChip()) {
-            localStorage.setItem(IMAGE_GENERATION_OPT_IN_KEY, '1');
+            setImageGenerationOptIn();
             document.documentElement.classList.add('musk-image-generation-opted-in');
           } else {
-            localStorage.removeItem(IMAGE_GENERATION_OPT_IN_KEY);
+            clearImageGenerationOptIn();
             document.documentElement.classList.remove('musk-image-generation-opted-in');
           }
           state.imageGenerationOptInPendingUntil = 0;
@@ -2132,8 +2194,6 @@ runtime = r'''
       const url = typeof input === 'string' ? input : input?.url || '';
       return /\/api\/(chat\/completions|v1\/chat\/completions|v1\/chats\/completion|chat\/completion)/i.test(url);
     };
-
-    const hasImageGenerationOptIn = () => localStorage.getItem(IMAGE_GENERATION_OPT_IN_KEY) === '1';
 
     const stripDefaultImageGeneration = (payload) => {
       if (!payload || typeof payload !== 'object' || hasImageGenerationOptIn()) return payload;
