@@ -1583,9 +1583,16 @@ runtime = r'''
     const isExternalBuiltInModel = (text) =>
       /(^|[\s"'“”])Arena Model($|[\s"'“”])/i.test(cleanModelLabel(text));
 
+    const isTopModelSelectorButton = (button) => {
+      if (!(button instanceof HTMLElement)) return false;
+      if (button.closest('#sidebar, form, #messages-container, [data-message-id], .message-listitem, .musk-model-dropdown')) return false;
+      const rect = getVisibleRect(button);
+      return Boolean(rect && rect.top <= 96 && rect.left >= 48 && rect.width >= 56);
+    };
+
     const getModelSelectorButtons = () => [
       ...document.querySelectorAll('button[id^="model-selector"], [id^="model-selector"] button')
-    ].filter((button) => button instanceof HTMLElement);
+    ].filter(isTopModelSelectorButton);
 
     const getSelectedModelLabel = () => {
       for (const button of getModelSelectorButtons()) {
@@ -1984,8 +1991,7 @@ runtime = r'''
           sessionStorage.removeItem(DEFAULT_MODEL_APPLIED_KEY);
           return;
         }
-        setPreferredModel(recommended, { forceLabel: true, forceRequest: true });
-        applyPreferredModelLabel();
+        setPreferredModel(recommended, { forceLabel: false, forceRequest: true });
       };
 
       applyDefault();
