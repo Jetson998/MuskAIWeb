@@ -856,6 +856,10 @@ style = r'''
     display: block !important;
   }
 
+  html.musk-webai-ui:not(.musk-image-generation-opted-in) .musk-image-generation-active-chip {
+    display: none !important;
+  }
+
   html.musk-webai-ui.musk-home-empty .musk-home-suggestions {
     width: min(600px, calc(100vw - 40px)) !important;
     max-height: none !important;
@@ -1129,10 +1133,17 @@ runtime = r'''
 
     const getImageGenerationLabel = (el) => {
       if (!(el instanceof HTMLElement)) return '';
+      const descendantLabels = [...el.querySelectorAll('[aria-label], [title]')]
+        .map((node) => node instanceof HTMLElement
+          ? `${node.getAttribute('aria-label') || ''} ${node.getAttribute('title') || ''}`
+          : '')
+        .join(' ');
       const parts = [
         el.textContent,
         el.getAttribute('aria-label'),
         el.getAttribute('title'),
+        el.getAttribute('data-testid'),
+        descendantLabels,
         el.closest('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"]')?.textContent,
         el.parentElement?.textContent
       ];
@@ -1141,6 +1152,9 @@ runtime = r'''
 
     const isImageGenerationControl = (el) =>
       /(图片生成|图像生成|生成图像|Image Generation|Generate Image|Generate images)/i.test(getImageGenerationLabel(el));
+
+    const isImageGenerationRemoveLabel = (label) =>
+      /(移除|删除|关闭|取消|清除|Remove|Close|Delete|Clear|Dismiss|×|✕)/i.test(label || '');
 
     const clearLegacyImageGenerationOptIn = () => {
       LEGACY_IMAGE_GENERATION_OPT_IN_KEYS.forEach((key) => localStorage.removeItem(key));
@@ -1184,6 +1198,7 @@ runtime = r'''
       if (!rect || rect.width < 36 || rect.height > 56) return false;
       const label = getImageGenerationLabel(el);
       if (isToggleOn(el)) return true;
+      if (isImageGenerationRemoveLabel(label)) return true;
       const classText = `${el.className || ''} ${[...el.querySelectorAll('*')]
         .map((child) => child instanceof HTMLElement ? child.className || '' : '')
         .join(' ')}`;
@@ -1191,13 +1206,61 @@ runtime = r'''
         /\b(bg-(?:sky|blue|cyan)-|text-(?:sky|blue|cyan)-|ring-(?:sky|blue|cyan)-)/i.test(classText);
     };
 
-    const hasActiveImageGenerationChip = () => [...document.querySelectorAll('button, [role="button"], [aria-label], [title]')]
+    const getImageGenerationChipCandidates = () =>
+      [...document.querySelectorAll('form button, form [role="button"], form [aria-label], form [title], form [class*="cursor-pointer"], #message-input-container button, #message-input-container [role="button"], #message-input-container [aria-label], #message-input-container [title], #message-input-container [class*="cursor-pointer"], .musk-composer button, .musk-composer [role="button"], .musk-composer [aria-label], .musk-composer [title], .musk-composer [class*="cursor-pointer"]')]
+        .filter((el) => el instanceof HTMLElement);
+
+    const getImageGenerationChipShell = (el) => {
+      if (!(el instanceof HTMLElement)) return null;
+      let node = el;
+      let shell = isActiveImageGenerationChip(el) ? el : null;
+      while (node && node instanceof HTMLElement && !node.matches('form, #message-input-container, .musk-composer')) {
+        const rect = getVisibleRect(node);
+        if (rect && rect.width >= 36 && rect.height <= 56 && isImageGenerationControl(node)) {
+          const label = getImageGenerationLabel(node);
+          if (isImageGenerationRemoveLabel(label) || node.querySelector('button, [role="button"], [aria-label], [title]')) {
+            shell = node;
+          }
+        }
+        node = node.parentElement;
+      }
+      return shell;
+    };
+
+    const markImageGenerationChips = () => {
+      document.querySelectorAll('.musk-image-generation-active-chip')
+        .forEach((el) => el.classList.remove('musk-image-generation-active-chip'));
+      getImageGenerationChipCandidates()
+        .filter((el) => isActiveImageGenerationChip(el))
+        .forEach((el) => {
+          const shell = getImageGenerationChipShell(el) || el;
+          shell.classList.add('musk-image-generation-active-chip');
+        });
+    };
+
+    const hasActiveImageGenerationChip = () => getImageGenerationChipCandidates()
       .some((el) => el instanceof HTMLElement && isActiveImageGenerationChip(el));
+
+    const findImageGenerationChipRemoveTarget = (el) => {
+      if (!(el instanceof HTMLElement)) return null;
+      const candidates = [
+        el,
+        ...el.querySelectorAll('button, [role="button"], [aria-label], [title]')
+      ].filter((node) => node instanceof HTMLElement);
+      return candidates.find((node) => {
+        const rect = getVisibleRect(node);
+        if (!rect) return false;
+        return isImageGenerationRemoveLabel(getImageGenerationLabel(node));
+      }) || null;
+    };
 
     const markImageGenerationDefaultOff = () => {
       clearLegacyImageGenerationOptIn();
       document.documentElement.classList.toggle('musk-image-generation-opted-in', hasImageGenerationOptIn());
-      if (hasImageGenerationOptIn()) return;
+      if (hasImageGenerationOptIn()) {
+        markImageGenerationChips();
+        return;
+      }
       if (Date.now() < state.imageGenerationOptInPendingUntil) return;
 
       [...document.querySelectorAll('button, [role="button"], [role="switch"], label, [class*="cursor-pointer"], [aria-label], [title]')]
@@ -1206,7 +1269,9 @@ runtime = r'''
           const rect = getVisibleRect(el);
           if (!rect) return;
           if (!isToggleOn(el) && !isActiveImageGenerationChip(el)) return;
-          const clickTarget = el.querySelector('[role="switch"], input[type="checkbox"], button') || el;
+          const clickTarget = isActiveImageGenerationChip(el)
+            ? findImageGenerationChipRemoveTarget(el) || el.querySelector('[role="switch"], input[type="checkbox"], button') || el
+            : el.querySelector('[role="switch"], input[type="checkbox"], button') || el;
           if (!(clickTarget instanceof HTMLElement)) return;
           state.suppressImageGenerationOptInTracking = true;
           clickTarget.click();
@@ -1214,6 +1279,8 @@ runtime = r'''
             state.suppressImageGenerationOptInTracking = false;
           }, 120);
         });
+      markImageGenerationChips();
+      window.setTimeout(markImageGenerationChips, 160);
     };
 
     const bindImageGenerationOptInTracking = () => {
