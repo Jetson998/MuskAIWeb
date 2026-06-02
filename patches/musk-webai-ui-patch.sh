@@ -2052,30 +2052,55 @@ runtime = r'''
       return payload;
     };
 
+    const applyChatRequestOverrides = (payload) => {
+      if (!payload || typeof payload !== 'object') return payload;
+      const preferred = getPreferredModel();
+      const shouldPatchModel = preferred?.forceRequest ||
+        (preferred?.forceLabel && !Object.prototype.hasOwnProperty.call(preferred, 'forceRequest'));
+
+      if (preferred?.id && shouldPatchModel) {
+        payload.model = preferred.id;
+        if (Array.isArray(payload.models)) payload.models = [preferred.id];
+      }
+
+      stripDefaultImageGeneration(payload);
+      return payload;
+    };
+
+    const patchChatRequestBody = (body) => {
+      if (typeof body !== 'string' || !body.trim().startsWith('{')) return null;
+      const payload = JSON.parse(body);
+      if (!payload || typeof payload !== 'object') return null;
+      applyChatRequestOverrides(payload);
+      return JSON.stringify(payload);
+    };
+
     const installPreferredModelFetchPatch = () => {
       if (window.__muskPreferredModelFetchPatched) return;
       window.__muskPreferredModelFetchPatched = true;
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (input, init = {}) => {
-        const preferred = getPreferredModel();
-        const shouldPatchRequest = preferred?.forceRequest ||
-          (preferred?.forceLabel && !Object.prototype.hasOwnProperty.call(preferred, 'forceRequest'));
         if (!isChatCompletionRequest(input)) return nativeFetch(input, init);
 
         try {
           const nextInit = { ...init };
-          const body = nextInit.body;
-          if (typeof body === 'string' && body.trim().startsWith('{')) {
-            const payload = JSON.parse(body);
-            if (payload && typeof payload === 'object') {
-              if (preferred?.id && shouldPatchRequest) {
-                payload.model = preferred.id;
-                if (Array.isArray(payload.models)) payload.models = [preferred.id];
-              }
-              stripDefaultImageGeneration(payload);
-              nextInit.body = JSON.stringify(payload);
-              return nativeFetch(input, nextInit);
-            }
+          const patchedInitBody = patchChatRequestBody(nextInit.body);
+          if (patchedInitBody) {
+            nextInit.body = patchedInitBody;
+            return nativeFetch(input, nextInit);
+          }
+
+          if (input instanceof Request && !nextInit.body && !input.bodyUsed && !/^(GET|HEAD)$/i.test(input.method || '')) {
+            return input.clone().text()
+              .then((body) => {
+                const patchedRequestBody = patchChatRequestBody(body);
+                if (!patchedRequestBody) return nativeFetch(input, init);
+                return nativeFetch(new Request(input, { ...nextInit, body: patchedRequestBody }));
+              })
+              .catch((error) => {
+                console.warn('[Musk WebAI] chat Request patch skipped', error);
+                return nativeFetch(input, init);
+              });
           }
         } catch (error) {
           console.warn('[Musk WebAI] chat request patch skipped', error);
@@ -2345,6 +2370,8 @@ runtime = r'''
         ensureStatusBanner('musk-model-select-status', '当前账户不可用该模型，请联系管理员开启权限。', 'error');
         return;
       }
+      const dropdown = row?.closest('.musk-model-dropdown');
+      if (dropdown instanceof HTMLElement) clickNativeModelOption(dropdown, model);
       setPreferredModel(model, { forceLabel: true, forceRequest: true });
       applyPreferredModelLabel();
       document.querySelectorAll('.musk-model-api-row').forEach((item) => {
