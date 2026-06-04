@@ -164,6 +164,43 @@ style = r'''
     stroke-width: 2.2 !important;
   }
 
+  html.musk-webai-ui .musk-sidebar-backdrop {
+    display: none !important;
+  }
+
+  html.musk-webai-ui.musk-sidebar-manual-open .musk-sidebar-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 88 !important;
+    display: block !important;
+    background: rgba(15, 23, 42, 0.26) !important;
+  }
+
+  html.musk-webai-ui.musk-sidebar-manual-open #sidebar,
+  html.musk-webai-ui #sidebar.musk-sidebar-force-open {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    width: min(82vw, 300px) !important;
+    min-width: min(82vw, 300px) !important;
+    max-width: min(82vw, 300px) !important;
+  }
+
+  @media (max-width: 767px) {
+    html.musk-webai-ui.musk-sidebar-manual-open #sidebar,
+    html.musk-webai-ui #sidebar.musk-sidebar-force-open {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      z-index: 90 !important;
+      height: 100dvh !important;
+      box-shadow: 18px 0 45px rgba(15, 23, 42, 0.18) !important;
+      background: #f8f9fb !important;
+    }
+  }
+
   html.musk-webai-ui.musk-sidebar-collapsed .musk-native-sidebar-toggle {
     visibility: hidden !important;
     opacity: 0 !important;
@@ -1148,6 +1185,8 @@ runtime = r'''
       const input = document.getElementById('chat-input');
       if (!input) return;
       input.classList.add('musk-chat-input');
+      if (!input.getAttribute('role')) input.setAttribute('role', 'textbox');
+      if (!input.getAttribute('aria-label')) input.setAttribute('aria-label', '输入消息');
       const form = input.closest('form');
       if (form) {
         form.classList.add('musk-composer');
@@ -1163,6 +1202,40 @@ runtime = r'''
           `${Math.ceil(Math.min(Math.max(height, 96), 220))}px`
         );
       }
+    };
+
+    const focusComposerInput = () => {
+      const input = document.getElementById('chat-input');
+      if (!(input instanceof HTMLElement)) return false;
+      if (document.activeElement === input || input.contains(document.activeElement)) return true;
+      try {
+        input.focus({ preventScroll: true });
+      } catch {
+        input.focus();
+      }
+      return document.activeElement === input || input.contains(document.activeElement);
+    };
+
+    const isComposerFocusRepairTarget = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const composer = target.closest('#chat-input, #chat-input-container, #message-input-container, .musk-composer');
+      if (!composer) return false;
+      if (target.closest('button, a, input, textarea, select, [role="button"], [role="switch"], [contenteditable="false"]')) {
+        return false;
+      }
+      return true;
+    };
+
+    const bindComposerFocusRepair = () => {
+      if (document.documentElement.dataset.muskComposerFocusRepairBound === '1') return;
+      document.documentElement.dataset.muskComposerFocusRepairBound = '1';
+      ['pointerdown', 'touchstart', 'click'].forEach((type) => {
+        document.addEventListener(type, (event) => {
+          const target = event.target instanceof HTMLElement ? event.target : null;
+          if (!isComposerFocusRepairTarget(target)) return;
+          window.setTimeout(focusComposerInput, type === 'click' ? 20 : 0);
+        }, true);
+      });
     };
 
     const getImageGenerationLabel = (el) => {
@@ -1476,19 +1549,16 @@ runtime = r'''
     const repairMissingHomeComposer = () => {
       if (window.location.pathname !== '/') return;
       if (document.getElementById('chat-input')) return;
-      if (Date.now() - state.routeStartedAt < 3500) return;
+      if (Date.now() - state.routeStartedAt < 9000) return;
       const bodyText = (document.body?.innerText || '')
         .trim()
         .replace(/\s+/g, ' ');
       if (/登录|Login|Sign in|注册|Register/i.test(bodyText)) return;
       if (/加载|Loading|Connecting|初始化/i.test(bodyText) && !/今天要完成什么工作/i.test(bodyText)) return;
-      const key = 'musk:webai:home-composer-reload';
-      const last = Number(sessionStorage.getItem(key) || 0);
-      if (Date.now() - last < 30000) return;
-      sessionStorage.setItem(key, String(Date.now()));
-      const url = new URL(window.location.href);
-      url.searchParams.set('musk-composer-repair', String(Date.now()));
-      window.location.replace(url.toString());
+      nudgeConnectionClient();
+      schedulePolish(480);
+      ensureStatusBanner('musk-home-composer-status', '对话框加载较慢，正在恢复输入区。', 'info');
+      window.setTimeout(() => ensureStatusBanner('musk-home-composer-status', ''), 4200);
     };
 
     const markThinking = () => {
@@ -1534,6 +1604,12 @@ runtime = r'''
     const getSidebar = () => document.getElementById('sidebar') ||
       [...document.querySelectorAll('aside[aria-label], nav[aria-label]')]
         .find((el) => /sidebar|侧边栏|侧栏/i.test(el.getAttribute('aria-label') || '')) ||
+      [...document.querySelectorAll('aside, nav')]
+        .find((el) => {
+          const text = noticeText(el);
+          return Boolean(el.querySelector('a[href^="/c/"], a[href="/"], button[aria-label="New Chat"], button[aria-label="新建聊天"]')) ||
+            /New Chat|新建聊天|历史会话|工作区|Workspace/i.test(text);
+        }) ||
       null;
 
     const isSidebarVisible = () => {
@@ -1578,15 +1654,37 @@ runtime = r'''
       }) || null;
     };
 
+    const closeManualSidebar = () => {
+      document.documentElement.classList.remove('musk-sidebar-manual-open');
+      getSidebar()?.classList?.remove('musk-sidebar-force-open');
+      document.querySelector('.musk-sidebar-backdrop')?.remove();
+    };
+
+    const ensureSidebarBackdrop = () => {
+      let backdrop = document.querySelector('.musk-sidebar-backdrop');
+      if (!backdrop && document.body) {
+        backdrop = document.createElement('button');
+        backdrop.type = 'button';
+        backdrop.className = 'musk-sidebar-backdrop';
+        backdrop.setAttribute('aria-label', '关闭侧边栏');
+        backdrop.addEventListener('click', closeManualSidebar);
+        document.body.appendChild(backdrop);
+      }
+      return backdrop;
+    };
+
     const restoreSidebarWithoutNativeButton = () => {
       const sidebar = getSidebar();
       if (!(sidebar instanceof HTMLElement)) return false;
       sidebar.classList.remove('hidden', '-translate-x-full', 'translate-x-[-100%]', 'w-0');
+      sidebar.classList.add('musk-sidebar-force-open');
       sidebar.style.removeProperty('display');
       sidebar.style.removeProperty('visibility');
       sidebar.style.removeProperty('opacity');
       sidebar.style.removeProperty('transform');
       sidebar.style.removeProperty('width');
+      document.documentElement.classList.add('musk-sidebar-manual-open');
+      ensureSidebarBackdrop();
       return true;
     };
 
@@ -1620,6 +1718,9 @@ runtime = r'''
           const nativeToggle = findSidebarToggleButton();
           if (nativeToggle) {
             nativeToggle.click();
+            window.setTimeout(() => {
+              if (!isSidebarVisible()) restoreSidebarWithoutNativeButton();
+            }, 220);
           } else if (!restoreSidebarWithoutNativeButton()) {
             ensureStatusBanner('musk-sidebar-status', '未找到可用的侧边栏展开入口，请刷新页面重试。', 'error');
           }
@@ -2865,14 +2966,6 @@ runtime = r'''
     };
 
     const softRefreshRoute = () => {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('musk-soft-reconnect', String(Date.now()));
-        window.history.replaceState(window.history.state, '', url.toString());
-        window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
-      } catch {
-        window.dispatchEvent(new Event('popstate'));
-      }
       nudgeConnectionClient();
     };
 
@@ -3041,7 +3134,7 @@ runtime = r'''
       if (elapsed > CONNECTION_RECOVERY_SOFT_ROUTE_MS && now - state.connectionRecoverySoftRouteAt > 30000) {
         state.connectionRecoverySoftRouteAt = now;
         softRefreshRoute();
-        ensureConnectionBanner('连接仍未恢复，正在重建当前会话连接。');
+        ensureConnectionBanner('连接仍未恢复，正在尝试重新建立连接。');
       }
 
       if (elapsed < CONNECTION_RECOVERY_RELOAD_MS) return;
@@ -3072,8 +3165,11 @@ runtime = r'''
           if (canAutoReload) {
             if (hasDraft) stashComposerDraft();
             sessionStorage.setItem(reloadKey, String(Date.now()));
-            ensureConnectionBanner(hasDraft ? '连接已卡住，正在刷新恢复；已暂存输入内容。' : '连接已卡住，正在刷新当前页面恢复。');
-            setTimeout(reloadWithCacheBust, 350);
+            ensureConnectionBanner(
+              hasDraft ? '连接已卡住，已暂存输入内容。请确认后刷新连接。' : '连接已卡住，请确认后刷新连接。',
+              'error',
+              true
+            );
           } else {
             ensureConnectionBanner('连接仍未恢复。当前有生成任务或恢复过于频繁，请确认后刷新连接。', 'error', true);
           }
@@ -3331,6 +3427,7 @@ runtime = r'''
       applyPreferredModelLabel();
       replaceText();
       markComposer();
+      bindComposerFocusRepair();
       markThinking();
       markUserMessages();
       bindImageGenerationOptInTracking();
