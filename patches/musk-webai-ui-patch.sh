@@ -1055,6 +1055,9 @@ runtime = r'''
     const CONNECTION_RECOVERY_RELOAD_COOLDOWN_MS = 2 * 60 * 1000;
     const CONNECTION_DRAFT_TTL_MS = 10 * 60 * 1000;
     const MODEL_CACHE_TTL_MS = 45 * 1000;
+    const TEXT_REPLACEMENT_MAX_RUNS_PER_ROUTE = 4;
+    const TEXT_REPLACEMENT_MIN_INTERVAL_MS = 700;
+    const POLISH_DEBOUNCE_MS = 260;
     const MODEL_PREFERENCE_KEY = 'musk:webai:selected-model';
     const IMAGE_GENERATION_OPT_IN_KEY = 'musk:webai:image-generation-opt-in-v3';
     const LEGACY_IMAGE_GENERATION_OPT_IN_KEYS = [
@@ -1081,7 +1084,11 @@ runtime = r'''
       modelSelectorOpeningTimer: null,
       suppressImageGenerationOptInTracking: false,
       imageGenerationOptInPendingUntil: 0,
-      polishPending: false
+      textReplacementPath: '',
+      textReplacementRuns: 0,
+      textReplacementLastAt: 0,
+      polishPending: false,
+      polishTimer: 0
     };
 
     const removeById = (root, ids) => {
@@ -1089,14 +1096,37 @@ runtime = r'''
     };
 
     const COMPOSER_PROTECTED_SELECTOR = 'form, #chat-input, #message-input-container, .musk-composer';
+    const TEXT_REPLACEMENT_SKIP_SELECTOR = 'script, style, noscript, textarea, input, select, option, pre, code, .cm-editor, .cm-content';
 
     const replaceText = () => {
       const target = document.body || document.documentElement;
       if (!target) return;
-      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      while (walker.nextNode()) nodes.push(walker.currentNode);
-      for (const node of nodes) {
+      const currentPath = window.location.pathname;
+      const now = Date.now();
+      if (state.textReplacementPath !== currentPath) {
+        state.textReplacementPath = currentPath;
+        state.textReplacementRuns = 0;
+        state.textReplacementLastAt = 0;
+      }
+      if (state.textReplacementRuns >= TEXT_REPLACEMENT_MAX_RUNS_PER_ROUTE) return;
+      if (
+        state.textReplacementRuns > 0 &&
+        now - state.textReplacementLastAt < TEXT_REPLACEMENT_MIN_INTERVAL_MS
+      ) return;
+
+      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          const parent = node.parentElement;
+          if (!parent || parent.closest(TEXT_REPLACEMENT_SKIP_SELECTOR)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      state.textReplacementRuns += 1;
+      state.textReplacementLastAt = now;
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
         if (!node.nodeValue) continue;
         let value = node.nodeValue;
         for (const [oldText, newText] of TEXT_REPLACEMENTS) {
@@ -1447,7 +1477,9 @@ runtime = r'''
       if (window.location.pathname !== '/') return;
       if (document.getElementById('chat-input')) return;
       if (Date.now() - state.routeStartedAt < 3500) return;
-      const bodyText = noticeText(document.body);
+      const bodyText = (document.body?.innerText || '')
+        .trim()
+        .replace(/\s+/g, ' ');
       if (/登录|Login|Sign in|注册|Register/i.test(bodyText)) return;
       if (/加载|Loading|Connecting|初始化/i.test(bodyText) && !/今天要完成什么工作/i.test(bodyText)) return;
       const key = 'musk:webai:home-composer-reload';
@@ -2037,8 +2069,9 @@ runtime = r'''
       if (!force && fresh && state.modelsCache.length) return Promise.resolve(state.modelsCache);
       if (state.modelsLoading) return state.modelsLoading;
 
+      const userModelsUrl = force ? '/api/models?refresh=true' : '/api/models';
       state.modelsLoading = Promise.allSettled([
-        fetchJson('/api/models?refresh=true').then((payload) =>
+        fetchJson(userModelsUrl).then((payload) =>
           normalizeModelsResponse(payload).map((model) => ({ ...model, source: 'user-available' }))
         ),
         fetchManagementModels()
@@ -2102,7 +2135,7 @@ runtime = r'''
           target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
         });
       });
-      fetchAvailableModels(false).then(() => {
+      fetchAvailableModels(needsRuntimeRefresh).then(() => {
         if (needsRuntimeRefresh) schedulePolish();
       });
     };
@@ -2148,7 +2181,10 @@ runtime = r'''
           const display = normalizeModelLookupKey(getModelDisplayName(model));
           return getModelLookupCandidates(model).includes(value) || value === display;
         });
-        if (match) setPreferredModel(match, false);
+        if (match) {
+          setPreferredModel(match, { forceLabel: true, forceRequest: true });
+          applyPreferredModelLabel();
+        }
       }, true);
     };
 
@@ -2194,29 +2230,25 @@ runtime = r'''
 
     const ensureDefaultModel = () => {
       if (isModelManagementPage()) return;
-      if (!state.userModelsLoadedAt) {
-        fetchAvailableModels(false).then(() => {
-          ensureDefaultModel();
-          schedulePolish();
+      if (state.userModelsLoadedAt) sanitizePreferredModel();
+      const preferred = getPreferredModel();
+      const hasCompletePreference = Boolean(preferred?.id && preferred.forceLabel && preferred.forceRequest);
+      if (sessionStorage.getItem(DEFAULT_MODEL_APPLIED_KEY) === '1' && hasCompletePreference) return;
+      if (preferred?.id) {
+        setPreferredModel({
+          id: preferred.id,
+          name: preferred.name || preferred.id
+        }, {
+          forceLabel: true,
+          forceRequest: true
         });
-        return;
+      } else {
+        setPreferredModel({ id: DEFAULT_MODEL_ID, name: MODEL_DISPLAY_NAMES[DEFAULT_MODEL_ID] || DEFAULT_MODEL_ID }, {
+          forceLabel: true,
+          forceRequest: true
+        });
       }
-      sanitizePreferredModel();
-      if (sessionStorage.getItem(DEFAULT_MODEL_APPLIED_KEY) === '1') return;
-      const applyDefault = () => {
-        sessionStorage.setItem(DEFAULT_MODEL_APPLIED_KEY, '1');
-        const userModels = getSelectableModels();
-        const recommended = userModels.find(isRecommendedModel) ||
-          userModels.find((model) => !isGptImageModel(model)) ||
-          userModels[0];
-        if (!recommended) {
-          sessionStorage.removeItem(DEFAULT_MODEL_APPLIED_KEY);
-          return;
-        }
-        setPreferredModel(recommended, { forceLabel: false, forceRequest: true });
-      };
-
-      applyDefault();
+      sessionStorage.setItem(DEFAULT_MODEL_APPLIED_KEY, '1');
     };
 
     const applyPreferredModelLabel = () => {
@@ -2917,12 +2949,15 @@ runtime = r'''
       if (state.path === window.location.pathname) return;
       state.path = window.location.pathname;
       state.routeStartedAt = Date.now();
+      state.textReplacementPath = '';
+      state.textReplacementRuns = 0;
+      state.textReplacementLastAt = 0;
       ensureStatusBanner('musk-route-loading-watchdog', '');
     };
 
     const routeLoadingWatchdog = () => {
       updateRouteState();
-      const loading = [...document.querySelectorAll('[role="status"], [aria-live], .animate-spin, [class*="animate-spin"], div, span')]
+      const loading = [...document.querySelectorAll('[role="status"], [aria-live], .animate-spin, [class*="animate-spin"], [data-testid*="loading"], [data-testid*="spinner"]')]
         .some((el) => {
           if (el.classList.contains('musk-status-banner')) return false;
           const rect = getVisibleRect(el);
@@ -2948,7 +2983,7 @@ runtime = r'''
     const markConnectionNotices = () => {
       const pattern = /(重新连接|正在重新连接|断开连接|连接已断开|连接中断|Reconnecting|Disconnected|Connection lost|Trying to reconnect)/i;
       let seenCount = 0;
-      document.querySelectorAll('[role="alert"], [role="status"], [aria-live], [class*="toast"], [class*="notification"], [class*="sonner"], div')
+      document.querySelectorAll('[role="alert"], [role="status"], [aria-live], [class*="toast"], [class*="notification"], [class*="sonner"], [data-sonner-toast], [data-testid*="toast"]')
         .forEach((el) => {
           const text = noticeText(el);
           if (!pattern.test(text)) return;
@@ -3313,13 +3348,18 @@ runtime = r'''
       connectionRecoveryWatchdog(markConnectionNotices());
     };
 
-    const schedulePolish = () => {
-      if (state.polishPending) return;
-      state.polishPending = true;
-      requestAnimationFrame(() => {
-        state.polishPending = false;
-        polish();
-      });
+    const schedulePolish = (delay = POLISH_DEBOUNCE_MS) => {
+      const wait = typeof delay === 'number' ? delay : POLISH_DEBOUNCE_MS;
+      if (state.polishTimer) return;
+      state.polishTimer = window.setTimeout(() => {
+        state.polishTimer = 0;
+        if (state.polishPending) return;
+        state.polishPending = true;
+        requestAnimationFrame(() => {
+          state.polishPending = false;
+          polish();
+        });
+      }, wait);
     };
 
     polish();
@@ -3330,11 +3370,16 @@ runtime = r'''
     window.addEventListener('offline', schedulePolish);
     window.addEventListener('focus', schedulePolish);
     document.addEventListener('visibilitychange', schedulePolish);
-    window.setInterval(schedulePolish, 2000);
-    new MutationObserver(schedulePolish).observe(document.documentElement, {
+    window.setInterval(schedulePolish, 5000);
+    const polishObserverTarget = document.body || document.documentElement;
+    new MutationObserver((mutations) => {
+      const hasStructureChange = mutations.some((mutation) =>
+        mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0
+      );
+      if (hasStructureChange) schedulePolish();
+    }).observe(polishObserverTarget, {
       childList: true,
-      subtree: true,
-      characterData: true
+      subtree: true
     });
   })();
 </script>
