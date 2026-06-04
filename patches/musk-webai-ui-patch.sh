@@ -177,7 +177,9 @@ style = r'''
   }
 
   html.musk-webai-ui.musk-sidebar-manual-open #sidebar,
-  html.musk-webai-ui #sidebar.musk-sidebar-force-open {
+  html.musk-webai-ui.musk-sidebar-manual-open .musk-sidebar-root,
+  html.musk-webai-ui #sidebar.musk-sidebar-force-open,
+  html.musk-webai-ui .musk-sidebar-root.musk-sidebar-force-open {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -187,9 +189,11 @@ style = r'''
     max-width: min(82vw, 300px) !important;
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 768px) {
     html.musk-webai-ui.musk-sidebar-manual-open #sidebar,
-    html.musk-webai-ui #sidebar.musk-sidebar-force-open {
+    html.musk-webai-ui.musk-sidebar-manual-open .musk-sidebar-root,
+    html.musk-webai-ui #sidebar.musk-sidebar-force-open,
+    html.musk-webai-ui .musk-sidebar-root.musk-sidebar-force-open {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
@@ -199,6 +203,86 @@ style = r'''
       box-shadow: 18px 0 45px rgba(15, 23, 42, 0.18) !important;
       background: #f8f9fb !important;
     }
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 91 !important;
+    width: min(84vw, 312px) !important;
+    height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px 16px !important;
+    background: #f8f9fb !important;
+    border-right: 1px solid rgba(213, 218, 227, 0.85) !important;
+    box-shadow: 18px 0 45px rgba(15, 23, 42, 0.18) !important;
+    color: #111827 !important;
+    overflow-y: auto !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    min-height: 40px !important;
+    font-size: 16px !important;
+    font-weight: 650 !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-close,
+  html.musk-webai-ui .musk-fallback-sidebar-new {
+    border: 1px solid rgba(213, 218, 227, 0.9) !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    color: #111827 !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
+    font-weight: 560 !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-close {
+    width: 36px !important;
+    padding: 0 !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-new {
+    width: 100% !important;
+    text-align: left !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-link,
+  html.musk-webai-ui .musk-fallback-sidebar-empty {
+    display: block !important;
+    width: 100% !important;
+    padding: 10px 10px !important;
+    border-radius: 10px !important;
+    color: #1f2937 !important;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    text-align: left !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-link:hover {
+    background: #fff !important;
+  }
+
+  html.musk-webai-ui .musk-fallback-sidebar-empty {
+    color: #6b7280 !important;
   }
 
   html.musk-webai-ui.musk-sidebar-collapsed .musk-native-sidebar-toggle {
@@ -1079,7 +1163,10 @@ runtime = r'''
 <script id="musk-webai-ui-runtime">
   (() => {
     const TEXT_REPLACEMENTS = [
-      ['AI 对话探索区', '对话创作']
+      ['AI 对话探索区', '对话创作'],
+      ['Set as default', '设为默认'],
+      ['How can I help you today?', '有什么我能帮您的吗？'],
+      ['Suggested', '建议']
     ];
     const GENERATION_TIMEOUT_MS = 5 * 60 * 1000;
     const LOADING_WARN_MS = 5 * 1000;
@@ -1111,6 +1198,11 @@ runtime = r'''
       connectionRecoverySoftRouteAt: 0,
       connectionRecoveryProbePending: false,
       lastConnectionRecoveryAttemptAt: 0,
+      homeChatFallbackStartedAt: 0,
+      homeChatFallbackNavigatedAt: 0,
+      homeChatFallbackSnapshot: '',
+      homeChatFallbackTimer: 0,
+      sidebarFallbackLoading: null,
       modelsCache: [],
       modelsLoadedAt: 0,
       modelsLoading: null,
@@ -1589,7 +1681,7 @@ runtime = r'''
     const markActiveSidebarLink = () => {
       const currentPath = window.location.pathname;
       document
-        .querySelectorAll('#sidebar a[href^="/c/"]')
+        .querySelectorAll('#sidebar a[href^="/c/"], .musk-sidebar-root a[href^="/c/"], .musk-fallback-sidebar a[href^="/c/"]')
         .forEach((el) => {
           let active = false;
           try {
@@ -1602,15 +1694,22 @@ runtime = r'''
     };
 
     const getSidebar = () => document.getElementById('sidebar') ||
+      document.querySelector('.musk-sidebar-root') ||
       [...document.querySelectorAll('aside[aria-label], nav[aria-label]')]
-        .find((el) => /sidebar|侧边栏|侧栏/i.test(el.getAttribute('aria-label') || '')) ||
-      [...document.querySelectorAll('aside, nav')]
+        .find((el) => /sidebar|侧边栏|侧栏|导航|navigation/i.test(el.getAttribute('aria-label') || '')) ||
+      [...document.querySelectorAll('aside, nav, [data-testid*="sidebar"], [class*="sidebar"], [class*="Sidebar"]')]
         .find((el) => {
           const text = noticeText(el);
           return Boolean(el.querySelector('a[href^="/c/"], a[href="/"], button[aria-label="New Chat"], button[aria-label="新建聊天"]')) ||
             /New Chat|新建聊天|历史会话|工作区|Workspace/i.test(text);
         }) ||
       null;
+
+    const markSidebarRoot = () => {
+      const sidebar = getSidebar();
+      if (sidebar instanceof HTMLElement) sidebar.classList.add('musk-sidebar-root');
+      return sidebar;
+    };
 
     const isSidebarVisible = () => {
       const sidebar = getSidebar();
@@ -1626,7 +1725,7 @@ runtime = r'''
     ) && !document.querySelector('form input[type="password"]');
 
     const findSidebarToggleButton = () => {
-      const labelPattern = /(展开侧边栏|展开侧栏|打开侧边栏|打开侧栏|Open Sidebar|Show Sidebar|Toggle Sidebar|Menu|菜单)/i;
+      const labelPattern = /(展开侧边栏|展开侧栏|打开侧边栏|打开侧栏|侧边栏|侧栏|导航菜单|导航|Open Sidebar|Show Sidebar|Toggle Sidebar|Sidebar|Navigation|Menu|菜单)/i;
       const buttons = [...document.querySelectorAll('button, [role="button"]')]
         .filter((button) => button instanceof HTMLElement && !button.classList.contains('musk-sidebar-restore-button'));
 
@@ -1639,7 +1738,15 @@ runtime = r'''
       if (resizeRailMatches.length && !isSidebarVisible()) return resizeRailMatches[0];
 
       const visibleMatches = buttons.filter((button) => {
-        const label = noticeText(button);
+        const label = [
+          noticeText(button),
+          button.getAttribute('aria-label'),
+          button.getAttribute('title'),
+          button.getAttribute('aria-controls'),
+          button.getAttribute('data-testid'),
+          button.id,
+          button.className
+        ].filter(Boolean).join(' ');
         if (!labelPattern.test(label)) return false;
         const rect = getVisibleRect(button);
         return Boolean(rect && rect.top <= 96 && rect.left <= 120);
@@ -1647,9 +1754,17 @@ runtime = r'''
       if (visibleMatches.length) return visibleMatches[0];
 
       return buttons.find((button) => {
-        const label = noticeText(button);
+        const label = [
+          noticeText(button),
+          button.getAttribute('aria-label'),
+          button.getAttribute('title'),
+          button.getAttribute('aria-controls'),
+          button.getAttribute('data-testid'),
+          button.id,
+          button.className
+        ].filter(Boolean).join(' ');
         if (!labelPattern.test(label)) return false;
-        if (button.closest('#sidebar') && !isSidebarVisible()) return false;
+        if (button.closest('#sidebar, .musk-sidebar-root') && !isSidebarVisible()) return false;
         return true;
       }) || null;
     };
@@ -1657,6 +1772,7 @@ runtime = r'''
     const closeManualSidebar = () => {
       document.documentElement.classList.remove('musk-sidebar-manual-open');
       getSidebar()?.classList?.remove('musk-sidebar-force-open');
+      document.querySelector('.musk-fallback-sidebar')?.remove();
       document.querySelector('.musk-sidebar-backdrop')?.remove();
     };
 
@@ -1674,7 +1790,7 @@ runtime = r'''
     };
 
     const restoreSidebarWithoutNativeButton = () => {
-      const sidebar = getSidebar();
+      const sidebar = markSidebarRoot();
       if (!(sidebar instanceof HTMLElement)) return false;
       sidebar.classList.remove('hidden', '-translate-x-full', 'translate-x-[-100%]', 'w-0');
       sidebar.classList.add('musk-sidebar-force-open');
@@ -1686,6 +1802,177 @@ runtime = r'''
       document.documentElement.classList.add('musk-sidebar-manual-open');
       ensureSidebarBackdrop();
       return true;
+    };
+
+    const normalizeChatList = (data) => {
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.chats)) return data.chats;
+      if (Array.isArray(data?.items)) return data.items;
+      return [];
+    };
+
+    const fetchRecentChats = async () => {
+      const urls = [
+        '/api/v1/chats/?page=1',
+        '/api/v1/chats/?page=1&limit=30',
+        '/api/v1/chats/',
+        '/api/chats/?page=1'
+      ];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+          if (!response.ok) continue;
+          const chats = normalizeChatList(await response.json())
+            .filter((chat) => chat && (chat.id || chat.chat_id));
+          if (chats.length) return chats;
+        } catch {
+          // Try the next compatible Open WebUI chat-list endpoint.
+        }
+      }
+      return [];
+    };
+
+    const getChatTitle = (chat) => String(
+      chat?.title ||
+      chat?.chat?.title ||
+      chat?.name ||
+      chat?.meta?.title ||
+      chat?.id ||
+      '未命名会话'
+    ).trim();
+
+    const getChatId = (chat) => String(chat?.id || chat?.chat_id || chat?.chat?.id || '').trim();
+
+    const getLinkedChatIds = () => [...document.querySelectorAll('a[href^="/c/"], a[href*="/c/"]')]
+      .map((link) => {
+        try {
+          const match = new URL(link.href, window.location.origin).pathname.match(/^\/c\/([^/?#]+)/);
+          return match ? decodeURIComponent(match[1]) : '';
+        } catch {
+          return '';
+        }
+      })
+      .filter(Boolean);
+
+    const getChatTimestamp = (chat) => {
+      const raw = chat?.updated_at || chat?.created_at || chat?.timestamp || chat?.time || chat?.meta?.updated_at || chat?.chat?.updated_at;
+      if (!raw) return 0;
+      if (typeof raw === 'number') return raw < 1000000000000 ? raw * 1000 : raw;
+      const parsed = Date.parse(raw);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const navigateToChatId = (id) => {
+      if (!id || window.location.pathname !== '/') return false;
+      const path = `/c/${encodeURIComponent(id)}`;
+      state.homeChatFallbackNavigatedAt = Date.now();
+      window.location.assign(path);
+      return true;
+    };
+
+    const findFallbackChatCandidate = (chats) => {
+      const snapshot = new Set(String(state.homeChatFallbackSnapshot || '').split('|').filter(Boolean));
+      const startedAt = Number(state.homeChatFallbackStartedAt || 0);
+      const normalized = chats
+        .map((chat) => ({ chat, id: getChatId(chat), ts: getChatTimestamp(chat) }))
+        .filter((item) => item.id);
+      return normalized.find((item) => !snapshot.has(item.id) && (snapshot.size || item.ts) && (!item.ts || !startedAt || item.ts >= startedAt - 60000)) ||
+        normalized.find((item) => startedAt && item.ts >= startedAt - 60000) ||
+        null;
+    };
+
+    const runHomeChatNavigationFallback = () => {
+      if (window.location.pathname !== '/') return;
+      if (!state.homeChatFallbackStartedAt) return;
+      if (Date.now() - state.homeChatFallbackNavigatedAt < 8000) return;
+      fetchRecentChats().then((chats) => {
+        if (window.location.pathname !== '/') return;
+        const candidate = findFallbackChatCandidate(chats);
+        if (candidate?.id) {
+          navigateToChatId(candidate.id);
+          return;
+        }
+        if (Date.now() - state.homeChatFallbackStartedAt > 12000) {
+          ensureStatusBanner('musk-home-route-fallback', '会话已创建，正在同步对话页。可从侧栏打开最新会话。', 'info');
+          window.setTimeout(() => ensureStatusBanner('musk-home-route-fallback', ''), 5000);
+        }
+      }).catch(() => {
+        // Keep native routing in charge if the history endpoint is unavailable.
+      });
+    };
+
+    const scheduleHomeChatNavigationFallback = () => {
+      if (window.location.pathname !== '/') return;
+      const now = Date.now();
+      state.homeChatFallbackStartedAt = now;
+      state.homeChatFallbackSnapshot = getLinkedChatIds().join('|');
+      fetchRecentChats().then((chats) => {
+        if (state.homeChatFallbackStartedAt !== now) return;
+        const ids = chats.map(getChatId).filter(Boolean);
+        if (ids.length) state.homeChatFallbackSnapshot = ids.join('|');
+      }).catch(() => {
+        // DOM snapshot still provides a safe fallback baseline.
+      });
+      window.clearTimeout(state.homeChatFallbackTimer);
+      [3500, 7000, 11000, 15000].forEach((delay) => {
+        window.setTimeout(runHomeChatNavigationFallback, delay);
+      });
+    };
+
+    const createFallbackSidebar = (chats = []) => {
+      ensureSidebarBackdrop();
+      document.querySelector('.musk-fallback-sidebar')?.remove();
+      const panel = document.createElement('aside');
+      panel.className = 'musk-fallback-sidebar';
+      panel.setAttribute('aria-label', '侧边栏');
+      const rows = chats.slice(0, 30).map((chat) => {
+        const id = getChatId(chat);
+        if (!id) return '';
+        const title = getChatTitle(chat).replace(/[<>&"]/g, (char) => ({
+          '<': '&lt;',
+          '>': '&gt;',
+          '&': '&amp;',
+          '"': '&quot;'
+        }[char]));
+        return `<a class="musk-fallback-sidebar-link" href="/c/${encodeURIComponent(id)}">${title}</a>`;
+      }).join('');
+      panel.innerHTML = `
+        <div class="musk-fallback-sidebar-header">
+          <span>Musk WebAI</span>
+          <button type="button" class="musk-fallback-sidebar-close" aria-label="关闭侧边栏">×</button>
+        </div>
+        <button type="button" class="musk-fallback-sidebar-new">新对话</button>
+        <div class="musk-fallback-sidebar-list">
+          ${rows || '<div class="musk-fallback-sidebar-empty">暂无历史会话</div>'}
+        </div>
+      `;
+      panel.querySelector('.musk-fallback-sidebar-close')?.addEventListener('click', closeManualSidebar);
+      panel.querySelector('.musk-fallback-sidebar-new')?.addEventListener('click', () => {
+        closeManualSidebar();
+        if (window.location.pathname !== '/') window.location.href = '/';
+      });
+      panel.querySelectorAll('a[href^="/c/"]').forEach((link) => {
+        link.addEventListener('click', () => closeManualSidebar());
+      });
+      document.body.appendChild(panel);
+      document.documentElement.classList.add('musk-sidebar-manual-open');
+      markActiveSidebarLink();
+      return panel;
+    };
+
+    const openFallbackSidebar = () => {
+      if (state.sidebarFallbackLoading) return state.sidebarFallbackLoading;
+      createFallbackSidebar([]);
+      const empty = document.querySelector('.musk-fallback-sidebar-empty');
+      if (empty) empty.textContent = '正在加载历史会话...';
+      state.sidebarFallbackLoading = fetchRecentChats()
+        .then((chats) => createFallbackSidebar(chats))
+        .catch(() => createFallbackSidebar([]))
+        .finally(() => {
+          state.sidebarFallbackLoading = null;
+        });
+      return state.sidebarFallbackLoading;
     };
 
     const ensureSidebarRestoreButton = () => {
@@ -1719,10 +2006,10 @@ runtime = r'''
           if (nativeToggle) {
             nativeToggle.click();
             window.setTimeout(() => {
-              if (!isSidebarVisible()) restoreSidebarWithoutNativeButton();
+              if (!isSidebarVisible() && !restoreSidebarWithoutNativeButton()) openFallbackSidebar();
             }, 220);
           } else if (!restoreSidebarWithoutNativeButton()) {
-            ensureStatusBanner('musk-sidebar-status', '未找到可用的侧边栏展开入口，请刷新页面重试。', 'error');
+            openFallbackSidebar();
           }
           window.setTimeout(ensureSidebarRestoreButton, 180);
         });
@@ -2440,6 +2727,7 @@ runtime = r'''
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (input, init = {}) => {
         if (!isChatCompletionRequest(input)) return nativeFetch(input, init);
+        scheduleHomeChatNavigationFallback();
 
         try {
           const nextInit = { ...init };
