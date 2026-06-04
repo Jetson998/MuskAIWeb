@@ -1864,11 +1864,47 @@ runtime = r'''
     };
 
     const navigateToChatId = (id) => {
-      if (!id || window.location.pathname !== '/') return false;
+      if (!id) return false;
       const path = `/c/${encodeURIComponent(id)}`;
       state.homeChatFallbackNavigatedAt = Date.now();
-      window.location.assign(path);
+      hardNavigateTo(path);
       return true;
+    };
+
+    const hardNavigateTo = (url) => {
+      if (!url) return false;
+      try {
+        const next = new URL(url, window.location.origin);
+        if (next.origin !== window.location.origin) return false;
+        const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        const target = `${next.pathname}${next.search}${next.hash}`;
+        if (current === target) {
+          window.location.reload();
+        } else {
+          window.location.assign(target);
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const bindSidebarChatHardNavigation = () => {
+      document
+        .querySelectorAll('#sidebar a[href^="/c/"], .musk-sidebar-root a[href^="/c/"], .musk-fallback-sidebar a[href^="/c/"]')
+        .forEach((link) => {
+          if (!(link instanceof HTMLAnchorElement)) return;
+          if (link.dataset.muskHardNavBound === '1') return;
+          link.dataset.muskHardNavBound = '1';
+          link.addEventListener('click', (event) => {
+            if (event.defaultPrevented) return;
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeManualSidebar();
+            hardNavigateTo(link.href);
+          }, true);
+        });
     };
 
     const findFallbackChatCandidate = (chats) => {
@@ -1958,6 +1994,7 @@ runtime = r'''
       document.body.appendChild(panel);
       document.documentElement.classList.add('musk-sidebar-manual-open');
       markActiveSidebarLink();
+      bindSidebarChatHardNavigation();
       return panel;
     };
 
@@ -3354,6 +3391,18 @@ runtime = r'''
       }
 
       const elapsed = Date.now() - state.routeStartedAt;
+      if (/^\/c\/[^/?#]+/.test(window.location.pathname) && elapsed > 7000) {
+        const reloadKey = `musk:webai:chat-route-reload:${window.location.pathname}`;
+        const lastReloadAt = Number(sessionStorage.getItem(reloadKey) || 0);
+        const hasMessageContent = Boolean(document.querySelector('[data-message-id], .message-listitem, #messages-container [class*="message"]'));
+        if (!hasMessageContent && Date.now() - lastReloadAt > 120000) {
+          sessionStorage.setItem(reloadKey, String(Date.now()));
+          const url = new URL(window.location.href);
+          url.searchParams.set('musk-chat-route-reload', String(Date.now()));
+          window.location.replace(url.toString());
+          return;
+        }
+      }
       if (elapsed > LOADING_ERROR_MS) {
         ensureStatusBanner('musk-route-loading-watchdog', '加载时间过长，可刷新或返回后重试。', 'error');
       } else if (elapsed > LOADING_WARN_MS) {
@@ -3721,6 +3770,7 @@ runtime = r'''
       bindImageGenerationOptInTracking();
       markImageGenerationDefaultOff();
       markActiveSidebarLink();
+      bindSidebarChatHardNavigation();
       ensureSidebarRestoreButton();
       markTableShells();
       markCodeBlocks();
