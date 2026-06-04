@@ -1159,6 +1159,12 @@ style = r'''
 </style>
 '''.strip()
 
+no_cache_meta = '''
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+'''.strip()
+
 runtime = r'''
 <script id="musk-webai-ui-runtime">
   (() => {
@@ -1203,6 +1209,7 @@ runtime = r'''
       homeChatFallbackSnapshot: '',
       homeChatFallbackTimer: 0,
       sidebarFallbackLoading: null,
+      cacheSafetyChecked: false,
       modelsCache: [],
       modelsLoadedAt: 0,
       modelsLoading: null,
@@ -1222,6 +1229,48 @@ runtime = r'''
 
     const removeById = (root, ids) => {
       ids.forEach((id) => root.querySelectorAll(`#${id}`).forEach((el) => el.remove()));
+    };
+
+    const ensureNoCacheMeta = () => {
+      const metas = [
+        ['http-equiv', 'Cache-Control', 'content', 'no-store, no-cache, must-revalidate, max-age=0'],
+        ['http-equiv', 'Pragma', 'content', 'no-cache'],
+        ['http-equiv', 'Expires', 'content', '0']
+      ];
+      metas.forEach(([nameAttr, nameValue, contentAttr, contentValue]) => {
+        const selector = `meta[${nameAttr}="${nameValue}"]`;
+        let meta = document.head?.querySelector(selector);
+        if (!meta && document.head) {
+          meta = document.createElement('meta');
+          meta.setAttribute(nameAttr, nameValue);
+          document.head.appendChild(meta);
+        }
+        meta?.setAttribute(contentAttr, contentValue);
+      });
+    };
+
+    const disableStaleClientCaches = () => {
+      if (state.cacheSafetyChecked) return;
+      state.cacheSafetyChecked = true;
+      ensureNoCacheMeta();
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations?.()
+            .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+            .catch(() => {});
+        }
+      } catch {
+        // Service worker APIs can be unavailable in restricted browsers.
+      }
+      try {
+        if (window.caches?.keys) {
+          window.caches.keys()
+            .then((keys) => keys.forEach((key) => window.caches.delete(key)))
+            .catch(() => {});
+        }
+      } catch {
+        // Cache API cleanup is best-effort only.
+      }
     };
 
     const COMPOSER_PROTECTED_SELECTOR = 'form, #chat-input, #message-input-container, .musk-composer';
@@ -1889,6 +1938,69 @@ runtime = r'''
       }
     };
 
+    const getHardChatHrefFromTarget = (target) => {
+      if (!(target instanceof Element)) return '';
+      const link = target.closest('a[href^="/c/"], a[href*="/c/"]');
+      if (link instanceof HTMLAnchorElement) return link.href;
+      const row = target.closest('#sidebar [href], .musk-sidebar-root [href], .musk-fallback-sidebar [href], #sidebar [data-href], .musk-sidebar-root [data-href], #sidebar [data-url], .musk-sidebar-root [data-url]');
+      const raw = row?.getAttribute?.('href') || row?.getAttribute?.('data-href') || row?.getAttribute?.('data-url') || '';
+      if (!raw) return '';
+      try {
+        const url = new URL(raw, window.location.origin);
+        return /^\/c\/[^/?#]+/.test(url.pathname) ? url.href : '';
+      } catch {
+        return '';
+      }
+    };
+
+    const isSidebarNewChatTarget = (target) => {
+      if (!(target instanceof Element)) return false;
+      const node = target.closest('#sidebar a, #sidebar button, .musk-sidebar-root a, .musk-sidebar-root button, .musk-fallback-sidebar a, .musk-fallback-sidebar button');
+      if (!(node instanceof HTMLElement)) return false;
+      const text = [
+        noticeText(node),
+        node.getAttribute('aria-label'),
+        node.getAttribute('title'),
+        node.getAttribute('href')
+      ].filter(Boolean).join(' ');
+      return /^(?:新对话|New Chat)$/i.test(text.trim()) ||
+        /(?:^|\s)(?:新对话|New Chat)(?:\s|$)/i.test(text);
+    };
+
+    const bindGlobalHardNavigation = () => {
+      if (document.documentElement.dataset.muskGlobalHardNavBound === '1') return;
+      document.documentElement.dataset.muskGlobalHardNavBound = '1';
+      const handleHardNavigationEvent = (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        if (
+          event.type !== 'touchstart' &&
+          typeof event.button === 'number' &&
+          event.button !== 0
+        ) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const href = getHardChatHrefFromTarget(target);
+        if (href) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          closeManualSidebar();
+          hardNavigateTo(href);
+          return;
+        }
+        if (isSidebarNewChatTarget(target)) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          closeManualSidebar();
+          hardNavigateTo(`/?musk-new-chat=${Date.now()}`);
+        }
+      };
+      ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach((type) => {
+        document.addEventListener(type, handleHardNavigationEvent, true);
+      });
+    };
+
     const bindSidebarChatHardNavigation = () => {
       document
         .querySelectorAll('#sidebar a[href^="/c/"], .musk-sidebar-root a[href^="/c/"], .musk-fallback-sidebar a[href^="/c/"]')
@@ -1897,13 +2009,14 @@ runtime = r'''
           if (link.dataset.muskHardNavBound === '1') return;
           link.dataset.muskHardNavBound = '1';
           link.addEventListener('click', (event) => {
-            if (event.defaultPrevented) return;
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            event.stopPropagation();
-            closeManualSidebar();
-            hardNavigateTo(link.href);
-          }, true);
+          if (event.defaultPrevented) return;
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          closeManualSidebar();
+          hardNavigateTo(link.href);
+        }, true);
         });
     };
 
@@ -3753,6 +3866,7 @@ runtime = r'''
 
     const polish = () => {
       document.documentElement.classList.add('musk-webai-ui');
+      disableStaleClientCaches();
       installPreferredModelFetchPatch();
       hideNativeSearch();
       bindModelSelectorRefresh();
@@ -3770,6 +3884,7 @@ runtime = r'''
       bindImageGenerationOptInTracking();
       markImageGenerationDefaultOff();
       markActiveSidebarLink();
+      bindGlobalHardNavigation();
       bindSidebarChatHardNavigation();
       ensureSidebarRestoreButton();
       markTableShells();
@@ -3822,6 +3937,12 @@ runtime = r'''
 
 
 def strip_existing(html: str) -> str:
+    html = re.sub(
+        r'<meta\s+http-equiv="(?:Cache-Control|Pragma|Expires)"\s+content="[^"]*">\s*',
+        '',
+        html,
+        flags=re.I,
+    )
     for style_id in STYLE_IDS:
         html = re.sub(
             rf'<style id="{re.escape(style_id)}">.*?</style>\s*',
@@ -3842,9 +3963,9 @@ def strip_existing(html: str) -> str:
 def inject(html: str) -> str:
     html = strip_existing(html)
     if '</head>' in html:
-        html = html.replace('</head>', f'{style}\n</head>', 1)
+        html = html.replace('</head>', f'{no_cache_meta}\n{style}\n</head>', 1)
     else:
-        html = f'{style}\n{html}'
+        html = f'{no_cache_meta}\n{style}\n{html}'
     if '</body>' in html:
         html = html.replace('</body>', f'{runtime}\n</body>', 1)
     else:
